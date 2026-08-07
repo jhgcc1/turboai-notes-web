@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #fdf5e6;
+  --ink: #5d4037;
+  --muted: #8d6e63;
+  --card-border: #d7ccc8;
+  --btn: #e8d5c4;
+  --random: #e9a680;
+  --school: #f3e3b5;
+  --personal: #9ebab0;
+  --font-display: "Libre Baskerville", Georgia, serif;
+  --font-body: "Source Sans 3", "Segoe UI", sans-serif;
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+.font-display {
+  font-family: var(--font-display);
+}
