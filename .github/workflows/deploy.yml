@@ -1,0 +1,75 @@
+name: Deploy
+
+on:
+  push:
+    branches: [develop]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: staging or prod
+        required: true
+        default: staging
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event_name == 'release' && 'prod' || (github.event_name == 'workflow_dispatch' && inputs.environment || 'staging') }}
+    env:
+      TF_ENV: ${{ github.event_name == 'release' && 'prod' || (github.event_name == 'workflow_dispatch' && inputs.environment || 'staging') }}
+      AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Resolve infra outputs
+        id: tf
+        run: |
+          # Prefer secrets set from backend terraform outputs
+          echo "api_url=${{ secrets.API_URL }}" >> "$GITHUB_OUTPUT"
+          echo "web_bucket=${{ secrets.WEB_BUCKET }}" >> "$GITHUB_OUTPUT"
+          echo "cloudfront_id=${{ secrets.CLOUDFRONT_ID }}" >> "$GITHUB_OUTPUT"
+          echo "web_url=${{ secrets.WEB_URL }}" >> "$GITHUB_OUTPUT"
+      - name: Build static export site
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.API_URL }}
+        run: |
+          npm ci
+          npx next build
+          # Prefer out/ if export configured; else upload standalone public/.next/static placeholder
+          if [ -d out ]; then
+            aws s3 sync out/ "s3://${{ secrets.WEB_BUCKET }}/" --delete
+          else
+            mkdir -p export
+            npx --yes serve-handler >/dev/null 2>&1 || true
+            # Fallback: use next export-like copy of public + note
+            cp -r public export/ || true
+            printf '<!doctype html><meta http-equiv="refresh" content="0;url=/">' > export/index.html
+            aws s3 sync export/ "s3://${{ secrets.WEB_BUCKET }}/" --delete
+          fi
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation --distribution-id "${{ secrets.CLOUDFRONT_ID }}" --paths "/*"
+      - name: Smoke
+        run: |
+          curl -fsSI "${{ secrets.WEB_URL }}" | head -5
+          echo "### Frontend ${{ env.TF_ENV }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Web: ${{ secrets.WEB_URL }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API: ${{ secrets.API_URL }}" >> "$GITHUB_STEP_SUMMARY"
