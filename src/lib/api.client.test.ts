@@ -66,3 +66,42 @@ describe("api client", () => {
     await api.updateNote(1, { title: "x" });
   });
 });
+
+describe("CSRF header injection", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ id: 1, email: "a@b.com" }), { status: 200 })),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.cookie = "csrftoken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+  });
+
+  it("sends X-CSRFToken on mutating requests when the cookie is set", async () => {
+    document.cookie = "csrftoken=abc123";
+    await api.login("a@b.com", "pass");
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(new Headers(init?.headers).get("X-CSRFToken")).toBe("abc123");
+  });
+
+  it("omits X-CSRFToken on mutating requests when no cookie is set", async () => {
+    await api.login("a@b.com", "pass");
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(new Headers(init?.headers).get("X-CSRFToken")).toBeNull();
+  });
+
+  it("omits X-CSRFToken on safe (GET) requests even when the cookie is set", async () => {
+    document.cookie = "csrftoken=abc123";
+    await api.me();
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(new Headers(init?.headers).get("X-CSRFToken")).toBeNull();
+  });
+
+  it("skips cookie lookup when document is unavailable (SSR)", async () => {
+    vi.stubGlobal("document", undefined);
+    await expect(api.login("a@b.com", "pass")).resolves.toBeTruthy();
+  });
+});

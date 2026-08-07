@@ -32,10 +32,23 @@ export class ApiError extends Error {
   }
 }
 
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
+
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
+  }
+  const method = (init.method ?? "GET").toUpperCase();
+  if (!SAFE_METHODS.has(method)) {
+    const csrfToken = getCookie("csrftoken");
+    if (csrfToken) headers.set("X-CSRFToken", csrfToken);
   }
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
