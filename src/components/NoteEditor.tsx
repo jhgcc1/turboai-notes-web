@@ -33,6 +33,7 @@ export function NoteEditor({ noteId }: { noteId: number }) {
   }, [noteId]);
 
   async function save(next?: Partial<{ title: string; body: string; category: number }>) {
+    /* v8 ignore next -- defensive guard: save() is only wired up once note/category are set */
     if (!note || category == null) return;
     setSaving(true);
     try {
