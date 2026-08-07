@@ -47,10 +47,7 @@ describe("api client", () => {
 
   it("notes with category query", async () => {
     await api.notes(3);
-    expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining("category=3"),
-      expect.any(Object),
-    );
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("category=3"), expect.any(Object));
   });
 
   it("handles invalid json body on error", async () => {

@@ -8,17 +8,13 @@ export function NotesHome() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [filter, setFilter] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         await api.me();
-        const [cats, ns] = await Promise.all([
-          api.categories(),
-          api.notes(filter ?? undefined),
-        ]);
+        const [cats, ns] = await Promise.all([api.categories(), api.notes(filter ?? undefined)]);
         if (!cancelled) {
           setCategories(cats);
           setNotes(ns);
@@ -35,12 +31,10 @@ export function NotesHome() {
   const title = useMemo(() => "All Categories", []);
 
   async function onNewNote() {
-    const cat = filter
-      ? categories.find((c) => c.id === filter)
-      : categories[0];
+    const cat = filter ? categories.find((c) => c.id === filter) : categories[0];
     if (!cat) return;
     const note = await api.createNote({ title: "Note Title", body: "", category: cat.id });
-    window.location.href = `/notes/${note.id}`;
+    window.location.href = `/notes/edit/?id=${note.id}`;
   }
 
   return (
@@ -78,12 +72,11 @@ export function NotesHome() {
             + New Note
           </button>
         </div>
-        {error ? <p className="text-red-700">{error}</p> : null}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {notes.map((n) => (
             <Link
               key={n.id}
-              href={`/notes/${n.id}`}
+              href={`/notes/edit/?id=${n.id}`}
               className="block min-h-40 rounded-2xl p-4 shadow-sm transition hover:scale-[1.01]"
               style={{ background: n.category_color }}
             >

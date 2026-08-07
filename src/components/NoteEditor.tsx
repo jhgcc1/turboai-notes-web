@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { api, Category, formatLastEdited, Note } from "@/lib/api";
 
@@ -65,17 +66,13 @@ export function NoteEditor({ noteId }: { noteId: number }) {
     return <main className="p-8">Loading…</main>;
   }
 
-  const color =
-    categories.find((c) => c.id === category)?.color ?? note.category_color;
+  const color = categories.find((c) => c.id === category)?.color ?? note.category_color;
 
   return (
     <main className="mx-auto min-h-screen max-w-4xl px-6 py-8">
       <div className="mb-4 flex items-center justify-between">
         <label className="inline-flex items-center gap-2 rounded-full border border-[var(--ink)] px-3 py-1">
-          <span
-            className="h-3 w-3 rounded-full"
-            style={{ background: color }}
-          />
+          <span className="h-3 w-3 rounded-full" style={{ background: color }} />
           <select
             className="bg-transparent outline-none"
             value={category}
@@ -89,15 +86,11 @@ export function NoteEditor({ noteId }: { noteId: number }) {
             ))}
           </select>
         </label>
-        <a href="/" className="text-2xl leading-none" aria-label="Close">
+        <Link href="/" className="text-2xl leading-none" aria-label="Close">
           ×
-        </a>
+        </Link>
       </div>
-      <form
-        onSubmit={onSubmit}
-        className="rounded-3xl p-8"
-        style={{ background: color }}
-      >
+      <form onSubmit={onSubmit} className="rounded-3xl p-8" style={{ background: color }}>
         <p className="mb-4 text-right text-sm text-[var(--ink)]">
           Last Edited: {formatLastEdited(note.updated_at)}
           {saving ? " (saving…)" : ""}

@@ -68,25 +68,19 @@ export const api = {
   me: () => request<User>("/api/auth/me/"),
   categories: () => request<Category[]>("/api/categories/"),
   notes: (categoryId?: number) =>
-    request<Note[]>(
-      categoryId ? `/api/notes/?category=${categoryId}` : "/api/notes/",
-    ),
+    request<Note[]>(categoryId ? `/api/notes/?category=${categoryId}` : "/api/notes/"),
   getNote: (id: number) => request<Note>(`/api/notes/${id}/`),
   createNote: (payload: { title: string; body: string; category: number }) =>
     request<Note>("/api/notes/", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  updateNote: (
-    id: number,
-    payload: Partial<{ title: string; body: string; category: number }>,
-  ) =>
+  updateNote: (id: number, payload: Partial<{ title: string; body: string; category: number }>) =>
     request<Note>(`/api/notes/${id}/`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     }),
-  deleteNote: (id: number) =>
-    request<void>(`/api/notes/${id}/`, { method: "DELETE" }),
+  deleteNote: (id: number) => request<void>(`/api/notes/${id}/`, { method: "DELETE" }),
 };
 
 export function formatNoteDate(iso: string, now = new Date()): string {

@@ -18,7 +18,15 @@ export function AuthDecorations() {
       </div>
       <div className="pointer-events-none fixed bottom-4 right-4 w-28 opacity-90" aria-hidden>
         <svg viewBox="0 0 140 90" xmlns="http://www.w3.org/2000/svg">
-          <ellipse cx="70" cy="60" rx="50" ry="28" fill="#f5f0e6" stroke="#5d4037" strokeWidth="2" />
+          <ellipse
+            cx="70"
+            cy="60"
+            rx="50"
+            ry="28"
+            fill="#f5f0e6"
+            stroke="#5d4037"
+            strokeWidth="2"
+          />
           <ellipse cx="40" cy="48" rx="16" ry="14" fill="#3e2723" />
           <ellipse cx="95" cy="55" rx="14" ry="12" fill="#c4785a" />
           <circle cx="55" cy="52" r="2" fill="#5d4037" />
