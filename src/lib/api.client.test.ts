@@ -135,8 +135,8 @@ describe("CSRF header injection", () => {
   });
 
   it("omits X-CSRFToken on mutating requests when no token is available", async () => {
-    vi.mocked(fetch).mockImplementation(async (url: string) => {
-      if (String(url).includes("/api/auth/csrf/")) {
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+      if (String(input).includes("/api/auth/csrf/")) {
         return new Response(JSON.stringify({ detail: "CSRF cookie set" }), { status: 200 });
       }
       return new Response(JSON.stringify({ id: 1, email: "a@b.com" }), { status: 200 });
@@ -147,8 +147,8 @@ describe("CSRF header injection", () => {
   });
 
   it("tolerates non-JSON csrf bootstrap responses", async () => {
-    vi.mocked(fetch).mockImplementation(async (url: string) => {
-      if (String(url).includes("/api/auth/csrf/")) {
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+      if (String(input).includes("/api/auth/csrf/")) {
         return new Response("not-json", { status: 200 });
       }
       return new Response(JSON.stringify({ id: 1, email: "a@b.com" }), { status: 200 });
