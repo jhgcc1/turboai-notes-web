@@ -164,6 +164,16 @@ describe("NotesHome", () => {
     expect(api.createNote).not.toHaveBeenCalled();
   });
 
+  it("shows the empty-state illustration when there are no notes", async () => {
+    vi.mocked(api.notes).mockResolvedValue([]);
+    render(<NotesHome />);
+    expect(
+      await screen.findByText("I'm just here waiting for your charming notes..."),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("empty-notes")).toBeInTheDocument();
+    expect(screen.queryByText("First note")).not.toBeInTheDocument();
+  });
+
   it("redirects to /login when the initial fetch fails", async () => {
     const hrefSetter = stubLocation();
     vi.mocked(api.me).mockRejectedValue(new Error("unauthenticated"));
