@@ -34,10 +34,25 @@ export class ApiError extends Error {
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
 
+/** In-memory CSRF token from /api/auth/csrf/ (readable cross-origin; cookie is not). */
+let csrfTokenMemory: string | null = null;
+
 function getCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : null;
+}
+
+async function ensureCsrfToken(): Promise<string | null> {
+  const existing = csrfTokenMemory ?? getCookie("csrftoken");
+  if (existing) return existing;
+  const res = await fetch(`${API_URL}/api/auth/csrf/`, { credentials: "include" });
+  const data = (await res.json().catch(() => ({}))) as { csrfToken?: string };
+  if (typeof data.csrfToken === "string" && data.csrfToken) {
+    csrfTokenMemory = data.csrfToken;
+    return data.csrfToken;
+  }
+  return getCookie("csrftoken");
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -47,7 +62,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   const method = (init.method ?? "GET").toUpperCase();
   if (!SAFE_METHODS.has(method)) {
-    const csrfToken = getCookie("csrftoken");
+    const csrfToken = await ensureCsrfToken();
     if (csrfToken) headers.set("X-CSRFToken", csrfToken);
   }
   const res = await fetch(`${API_URL}${path}`, {
@@ -66,7 +81,13 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  csrf: () => request<{ detail: string }>("/api/auth/csrf/"),
+  csrf: async () => {
+    const data = await request<{ detail: string; csrfToken?: string }>("/api/auth/csrf/");
+    if (typeof data.csrfToken === "string" && data.csrfToken) {
+      csrfTokenMemory = data.csrfToken;
+    }
+    return data;
+  },
   register: (email: string, password: string) =>
     request<User>("/api/auth/register/", {
       method: "POST",
@@ -95,6 +116,11 @@ export const api = {
     }),
   deleteNote: (id: number) => request<void>(`/api/notes/${id}/`, { method: "DELETE" }),
 };
+
+/** Test helper — clears the in-memory CSRF token between cases. */
+export function _resetCsrfTokenForTests(): void {
+  csrfTokenMemory = null;
+}
 
 export function formatNoteDate(iso: string, now = new Date()): string {
   const d = new Date(iso);
