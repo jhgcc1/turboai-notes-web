@@ -132,13 +132,18 @@ export function formatNoteDate(iso: string, now = new Date()): string {
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric" });
 }
 
+/** Editor "Last Edited" — Figma/video: `July 21, 2024 at 8:35pm`. */
 export function formatLastEdited(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleString("en-US", {
+  const datePart = d.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
   });
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const meridiem = hours >= 12 ? "pm" : "am";
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  return `${datePart} at ${hours}:${minutes}${meridiem}`;
 }
