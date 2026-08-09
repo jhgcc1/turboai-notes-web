@@ -18,9 +18,12 @@ describe("api client", () => {
           return new Response(JSON.stringify({ detail: "bad" }), { status: 400 });
         }
         if (String(url).includes("/api/auth/csrf/")) {
-          return new Response(JSON.stringify({ detail: "CSRF cookie set", csrfToken: "from-api" }), {
-            status: 200,
-          });
+          return new Response(
+            JSON.stringify({ detail: "CSRF cookie set", csrfToken: "from-api" }),
+            {
+              status: 200,
+            },
+          );
         }
         return new Response(JSON.stringify({ ok: true }), { status: 200 });
       }),
@@ -81,9 +84,12 @@ describe("CSRF header injection", () => {
       "fetch",
       vi.fn(async (url: string) => {
         if (String(url).includes("/api/auth/csrf/")) {
-          return new Response(JSON.stringify({ detail: "CSRF cookie set", csrfToken: "body-token" }), {
-            status: 200,
-          });
+          return new Response(
+            JSON.stringify({ detail: "CSRF cookie set", csrfToken: "body-token" }),
+            {
+              status: 200,
+            },
+          );
         }
         return new Response(JSON.stringify({ id: 1, email: "a@b.com" }), { status: 200 });
       }),
@@ -106,7 +112,9 @@ describe("CSRF header injection", () => {
   it("sends X-CSRFToken from csrf() response body when cookie is unreadable", async () => {
     await api.csrf();
     await api.logout();
-    const logoutCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).includes("/logout/"));
+    const logoutCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).includes("/logout/"));
     expect(new Headers(logoutCall?.[1]?.headers).get("X-CSRFToken")).toBe("body-token");
   });
 
@@ -119,7 +127,9 @@ describe("CSRF header injection", () => {
 
   it("lazily fetches csrf token before mutating when memory and cookie are empty", async () => {
     await api.logout();
-    const logoutCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).includes("/logout/"));
+    const logoutCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([url]) => String(url).includes("/logout/"));
     expect(new Headers(logoutCall?.[1]?.headers).get("X-CSRFToken")).toBe("body-token");
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes("/csrf/"))).toBe(true);
   });
