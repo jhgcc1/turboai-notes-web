@@ -1,9 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  _resetClientErrorGateForTests,
-  reportClientError,
-} from "./clientError";
+import { _resetClientErrorGateForTests, reportClientError } from "./clientError";
 
 vi.mock("./api", () => ({
   api: {
