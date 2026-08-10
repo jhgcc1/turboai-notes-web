@@ -939,33 +939,164 @@ flowchart TB
 
   <section class="card anchor-offset" id="secrets">
     <h2>6. Environment variables and secrets — where each one lives</h2>
-    <p class="lede">There are <strong>four</strong> places where configuration/secrets live, each with a different purpose. The table below was verified directly against <code>terraform/modules/stack/main.tf</code> and <code>terraform/modules/observability/main.tf</code>, the <code>deploy.yml</code> workflows, and <code>docs/process/04-github-secrets.md</code> / <code>07-security-audit.md</code>.</p>
+    <p class="lede">Complete inventory verified <strong>2026-08-10</strong> against GitHub Secrets/Environments (<code>jhgcc1/turboai-notes-api</code>, <code>turboai-notes-web</code>), AWS Secrets Manager (<code>us-east-2</code>, account <code>615737882760</code>, names matching <code>turboai-notes-*</code>), Terraform (<code>modules/stack</code>, <code>modules/observability</code>, <code>envs/staging</code>, <code>envs/prod</code>), live ECS task definitions, and triage Lambda configuration. <strong>No secret values are stored in this document.</strong></p>
 
     <div class="legend">
-      <div><span class="badge gh">GitHub Secrets</span> used only by CI/CD, never reach the container runtime</div>
-      <div><span class="badge sm">AWS Secrets Manager</span> the app's real secret, resolved by ECS at startup</div>
-      <div><span class="badge env">ECS env var (plain text)</span> non-sensitive configuration in the task definition</div>
-      <div><span class="badge local">Local (.env)</span> only on the developer's machine</div>
+      <div><span class="badge gh">GitHub Secrets</span> CI/CD inputs (some are config stored as secrets)</div>
+      <div><span class="badge sm">AWS Secrets Manager</span> runtime credentials resolved by ECS / Lambda</div>
+      <div><span class="badge env">Plain env / config</span> non-secret task or Lambda environment</div>
+      <div><span class="badge local">Local only</span> developer / operator disk — never GitHub</div>
     </div>
 
+    <h3>Full inventory</h3>
     <div class="table-wrap">
     <table class="tight">
-      <tr><th>Name</th><th>Where it lives</th><th>How it reaches the app</th></tr>
-      <tr><td><code>AWS_ROLE_ARN</code></td><td><span class="badge gh">GitHub Secrets</span> (repo + <code>staging</code>/<code>prod</code> Environments, both repos)</td><td>CI/CD only: <code>aws-actions/configure-aws-credentials</code> assumes the role via OIDC. Never becomes an app variable.</td></tr>
-      <tr><td><code>DB_PASSWORD</code></td><td><span class="badge gh">GitHub Secrets</span> (api repo)</td><td><code>TF_VAR_db_password</code> → RDS master password (<code>aws_db_instance.password</code>) <strong>and</strong> written to <span class="badge sm">Secrets Manager</span> <code>turboai-notes-staging-db-password</code> → read by ECS via the <code>secrets:</code> block as <code>POSTGRES_PASSWORD</code>.</td></tr>
-      <tr><td><code>DJANGO_SECRET_KEY</code></td><td><span class="badge gh">GitHub Secrets</span> (api repo)</td><td><code>TF_VAR_django_secret_key</code> → <span class="badge sm">Secrets Manager</span> <code>turboai-notes-staging-django-secret-key</code> → ECS <code>secrets:</code> → <code>SECRET_KEY</code> env var inside the container.</td></tr>
-      <tr><td><code>AWS_REGION</code></td><td><span class="badge gh">GitHub Secrets</span> (both repos)</td><td>⚠️ The API <strong>ignores</strong> this secret (hardcoded <code>us-east-2</code> in <code>deploy.yml</code>); the web repo reads <code>secrets.AWS_REGION</code> with a fallback to <code>us-east-1</code>.</td></tr>
-      <tr><td><code>API_URL</code>, <code>WEB_URL</code></td><td><span class="badge gh">GitHub Secrets</span> (both repos)</td><td>Filled in manually after the first staging <code>terraform apply</code>; used in smoke tests and as the build-time <code>NEXT_PUBLIC_API_URL</code> for the frontend.</td></tr>
-      <tr><td><code>WEB_BUCKET</code>, <code>CLOUDFRONT_ID</code></td><td><span class="badge gh">GitHub Secrets</span> (web repo)</td><td>Used only in the frontend's <code>deploy.yml</code>: <code>aws s3 sync</code> and <code>cloudfront create-invalidation</code>.</td></tr>
-      <tr><td><code>SECRET_KEY</code> (runtime)</td><td><span class="badge sm">AWS Secrets Manager</span> <code>turboai-notes-{env}-django-secret-key</code></td><td>Task definition <code>secrets:</code> block (<code>valueFrom</code> = ARN) — <strong>never appears in plain text</strong> in the task definition or the ECS console.</td></tr>
-      <tr><td><code>POSTGRES_PASSWORD</code> (runtime)</td><td><span class="badge sm">AWS Secrets Manager</span> <code>turboai-notes-{env}-db-password</code></td><td>Same — <code>secrets:</code> block.</td></tr>
-      <tr><td>MiniMax <code>api_key</code> / <code>base_url</code> / <code>model</code> (runtime, triage Lambda)</td><td><span class="badge sm">AWS Secrets Manager</span> <code>turboai-notes-{env}-llm-credentials</code></td><td>Terraform creates the secret with a <code>REPLACE_ME</code> placeholder and <code>ignore_changes</code> on its value; the real key is written once with <code>aws secretsmanager put-secret-value</code>, so it never reaches a tfvars file, the state file, or git. The Lambda reads it at runtime via <code>LLM_SECRET_ID</code> and caches it per container — it is <strong>not</strong> a Lambda environment variable, since those are readable with <code>lambda:GetFunctionConfiguration</code>. See <a href="#observability">section 5</a>.</td></tr>
-      <tr><td><code>ENVIRONMENT</code>, <code>DEBUG</code>, <code>POSTGRES_DB/USER/HOST/PORT</code>, <code>ALLOWED_HOSTS</code>, <code>COOKIE_SECURE</code>, <code>COOKIE_SAMESITE</code>, <code>SERVICE_NAME</code>, <code>CLOUDWATCH_ENABLED</code> (<code>false</code>) / <code>CLOUDWATCH_LOG_GROUP</code>, <code>AWS_REGION</code>, <code>CORS_ALLOWED_ORIGINS</code>, <code>CSRF_TRUSTED_ORIGINS</code>, <code>FRONTEND_URL</code></td><td><span class="badge env">ECS task definition — <code>environment</code> (plain text)</span></td><td>Set directly by Terraform in <code>container_definitions[0].environment</code>. Not secrets — but visible via <code>describe-task-definition</code>. <code>CLOUDWATCH_ENABLED</code> is <strong><code>false</code></strong>: the <code>awslogs</code> driver already ships stdout, so watchtower would duplicate every line (<a href="#observability">section 5</a>).</td></tr>
-      <tr><td><code>ops_email</code> (Terraform input)</td><td><span class="badge local">Operator shell (<code>TF_VAR_ops_email</code>) or the default in <code>terraform/envs/{staging,prod}/main.tf</code></span></td><td>Not a secret: the address subscribed to <code>turboai-notes-{env}-triage-reports</code>. Empty by default, which creates the topic with no subscriber; AWS sends a confirmation link that must be clicked before any report is delivered.</td></tr>
-      <tr><td><code>SECRET_KEY=unsafe-dev-only-key</code>, <code>POSTGRES_PASSWORD=turbo_dev_password</code>, etc.</td><td><span class="badge local">Local file <code>backend/.env</code></span> (gitignored)</td><td>Read via <code>python-dotenv</code> in <code>config/settings.py</code>. <code>.env.example</code> documents the keys without real values.</td></tr>
-      <tr><td>Bastion SSH private key (<code>~/turbo-notes-bastion.pem</code>)</td><td><span class="badge local">Operator's disk</span> (outside the repo)</td><td>Used by the MCP (<code>tools/tunnel.py</code>) and for manual SSH. Only the <strong>public</strong> key (<code>terraform/bastion.pub</code>) is version-controlled.</td></tr>
+      <tr><th>Name</th><th>Where stored</th><th>Who consumes</th><th>Staging</th><th>Prod</th><th>Notes</th></tr>
+      <tr>
+        <td><code>AWS_ROLE_ARN</code></td>
+        <td><span class="badge gh">GitHub Secrets</span> (repo + <code>staging</code>/<code>prod</code> Environments, both repos)</td>
+        <td>API + web <code>deploy.yml</code> via <code>aws-actions/configure-aws-credentials</code> (OIDC)</td>
+        <td>Present</td>
+        <td>Present</td>
+        <td>Stores the deploy role ARN string. The OIDC role itself is an <strong>IAM</strong> principal (created by <code>scripts/bootstrap-aws-github-oidc.sh</code>), not a confidential app secret. Never becomes a container/Lambda env var.</td>
+      </tr>
+      <tr>
+        <td><code>DB_PASSWORD</code> → SM <code>turboai-notes-{env}-db-password</code> → ECS <code>POSTGRES_PASSWORD</code></td>
+        <td><span class="badge gh">GitHub Secrets</span> (api repo + Environments) → Terraform → <span class="badge sm">Secrets Manager</span></td>
+        <td>Terraform (<code>TF_VAR_db_password</code>): RDS master password <strong>and</strong> SM write; ECS task resolves SM via <code>secrets:</code> / execution role</td>
+        <td>Present (GH + SM)</td>
+        <td>Present (GH + SM)</td>
+        <td>Real secret. Intentional two-hop: GH → <code>terraform apply</code> → SM → ECS at task start. Never plaintext in the task definition.</td>
+      </tr>
+      <tr>
+        <td><code>DJANGO_SECRET_KEY</code> → SM <code>turboai-notes-{env}-django-secret-key</code> → ECS <code>SECRET_KEY</code></td>
+        <td><span class="badge gh">GitHub Secrets</span> (api repo + Environments) → Terraform → <span class="badge sm">Secrets Manager</span></td>
+        <td>Terraform (<code>TF_VAR_django_secret_key</code>) writes SM; ECS resolves via <code>secrets:</code> as Django <code>SECRET_KEY</code></td>
+        <td>Present (GH + SM)</td>
+        <td>Present (GH + SM)</td>
+        <td>Real secret. Same two-hop path as the DB password.</td>
+      </tr>
+      <tr>
+        <td><code>AWS_REGION</code></td>
+        <td><span class="badge gh">GitHub Secrets</span> (both repos + Environments)</td>
+        <td>Web <code>deploy.yml</code> (<code>secrets.AWS_REGION</code>); API <code>deploy.yml</code> <strong>ignores</strong> it (hardcodes <code>us-east-2</code>)</td>
+        <td>Present</td>
+        <td>Present</td>
+        <td><strong>Config, not a credential</strong> — stored as a GitHub Secret for workflow injection.</td>
+      </tr>
+      <tr>
+        <td><code>API_URL</code>, <code>WEB_URL</code></td>
+        <td><span class="badge gh">GitHub Secrets</span> (both repos; also Environment-scoped especially on prod)</td>
+        <td>Smoke <code>curl</code>; web build-time <code>NEXT_PUBLIC_API_URL</code></td>
+        <td>Repo-level present; Environment scoping incomplete vs prod</td>
+        <td>Present (repo + Environments)</td>
+        <td><strong>Config, not a credential</strong> — CloudFront URLs filled from API Terraform outputs after first apply.</td>
+      </tr>
+      <tr>
+        <td><code>WEB_BUCKET</code>, <code>CLOUDFRONT_ID</code></td>
+        <td><span class="badge gh">GitHub Secrets</span> (web repo; prod Environment)</td>
+        <td>Web <code>deploy.yml</code> only (<code>aws s3 sync</code>, CloudFront invalidation)</td>
+        <td>Repo-level present; staging Environment currently only has <code>AWS_REGION</code></td>
+        <td>Present (repo + prod Environment)</td>
+        <td><strong>Config, not a credential</strong>.</td>
+      </tr>
+      <tr>
+        <td>MiniMax / LLM credentials<br/><code>turboai-notes-{env}-llm-credentials</code></td>
+        <td><span class="badge sm">Secrets Manager</span> only (Terraform placeholder + operator <code>put-secret-value</code>)</td>
+        <td><strong>Triage Lambda only</strong> (<code>LLM_SECRET_ID</code> → <code>GetSecretValue</code>). Django ECS and the Next.js SPA <strong>never</strong> call MiniMax / any LLM.</td>
+        <td>Secret exists; <code>api_key</code> populated</td>
+        <td>Secret exists; value still Terraform <code>REPLACE_ME</code> placeholder until populated</td>
+        <td>JSON keys: <code>api_key</code>, <code>base_url</code>, <code>model</code>. <strong>Not</strong> in GitHub Actions. IAM read granted only to the triage role. Values in the secret override Lambda env defaults for base URL / model.</td>
+      </tr>
+      <tr>
+        <td>Jira credentials<br/><code>turboai-notes-{env}-jira-credentials</code></td>
+        <td><span class="badge sm">Secrets Manager</span> (created only when <code>jira_enabled=true</code>)</td>
+        <td>Triage Lambda only (<code>JIRA_SECRET_ID</code>) when <code>JIRA_ENABLED=true</code></td>
+        <td><strong>Enabled</strong> — secret exists and is populated; project <code>KAN</code></td>
+        <td><strong>Disabled</strong> — <code>jira_enabled=false</code>; <strong>no</strong> <code>turboai-notes-prod-jira-credentials</code> secret</td>
+        <td>JSON keys: <code>base_url</code>, <code>email</code>, <code>api_token</code>. Out-of-band <code>put-secret-value</code>; never in GH or Lambda plaintext env. Staging default in <code>envs/staging/main.tf</code>; prod default false in <code>envs/prod/main.tf</code>.</td>
+      </tr>
+      <tr>
+        <td>Bastion SSH private key<br/>(e.g. <code>~/turbo-notes-bastion.pem</code>)</td>
+        <td><span class="badge local">Local disk</span> — <strong>not</strong> Secrets Manager, <strong>not</strong> GitHub</td>
+        <td>MCP (<code>backend/mcp/.env</code> → <code>TURBO_SSH_KEY</code>) and manual SSH / tunnels</td>
+        <td>Local operator key</td>
+        <td>Same keypair pattern</td>
+        <td>Only the <strong>public</strong> key is in git (<code>backend/terraform/bastion.pub</code> → <code>aws_key_pair</code>). Private PEM must never be committed.</td>
+      </tr>
+      <tr>
+        <td>MCP local env<br/>(<code>TURBO_*_DB_PASSWORD</code>, hosts, <code>TURBO_SSH_KEY</code>, SSO URL, …)</td>
+        <td><span class="badge local">Local</span> <code>backend/mcp/.env</code> (gitignored); keys documented in <code>backend/mcp/.env.example</code></td>
+        <td>Local MCP server only (tunnels, DB tools, logs)</td>
+        <td>Local-only</td>
+        <td>Local-only</td>
+        <td><strong>Not</strong> GitHub Secrets. Example file has no real passwords/keys. Prod DB via MCP is read-only by policy.</td>
+      </tr>
+      <tr>
+        <td>Local Django <code>backend/.env</code><br/>(<code>SECRET_KEY</code>, <code>POSTGRES_PASSWORD</code>, …)</td>
+        <td><span class="badge local">Local</span> (gitignored); keys in <code>backend/.env.example</code></td>
+        <td>Local Docker / <code>runserver</code> via <code>python-dotenv</code></td>
+        <td>N/A (dev)</td>
+        <td>N/A (dev)</td>
+        <td>Dev placeholders only. Staging/prod never read this file.</td>
+      </tr>
+      <tr>
+        <td><code>ops_email</code> (Terraform)</td>
+        <td><span class="badge env">TF variable</span> (<code>TF_VAR_ops_email</code> or env <code>main.tf</code> default)</td>
+        <td>SNS email subscription on <code>turboai-notes-{env}-triage-reports</code></td>
+        <td>Optional (empty default)</td>
+        <td>Optional (empty default)</td>
+        <td><strong>Not a secret</strong> — mailbox address. Confirmation link required before delivery.</td>
+      </tr>
+      <tr>
+        <td>CORS / CSRF / frontend URL / cookie flags / Postgres host&amp;db / <code>ALLOWED_HOSTS</code> / CloudWatch wiring / Lambda knobs</td>
+        <td><span class="badge env">ECS / Lambda plain <code>environment</code></span> (Terraform)</td>
+        <td>Django container; triage Lambda (non-credential knobs + <code>LLM_SECRET_ID</code> / optional <code>JIRA_*</code> ids)</td>
+        <td>Set by TF</td>
+        <td>Set by TF</td>
+        <td><strong>Config, not secrets</strong>. Visible via <code>describe-task-definition</code> / <code>GetFunctionConfiguration</code>. Includes <code>CORS_ALLOWED_ORIGINS</code>, <code>CSRF_TRUSTED_ORIGINS</code>, <code>FRONTEND_URL</code>, <code>COOKIE_*</code>, <code>POSTGRES_HOST</code>, <code>CLOUDWATCH_ENABLED=false</code>, triage <code>LOOKBACK_MINUTES</code>, <code>LLM_MODEL</code> defaults, etc. Credential material is never here.</td>
+      </tr>
+      <tr>
+        <td><code>OPENAI_API_KEY</code> (hypothetical)</td>
+        <td>—</td>
+        <td>—</td>
+        <td>Not configured</td>
+        <td>Not configured</td>
+        <td><code>ai-review.yml</code> is regex-only today; no LLM secret is configured in either repo.</td>
+      </tr>
     </table>
     </div>
+
+    <h3>AWS Secrets Manager — live names (<code>us-east-2</code>)</h3>
+    <div class="table-wrap">
+    <table class="tight">
+      <tr><th>Secret name</th><th>Staging</th><th>Prod</th><th>Consumer</th></tr>
+      <tr><td><code>turboai-notes-{env}-django-secret-key</code></td><td>✅</td><td>✅</td><td>ECS → <code>SECRET_KEY</code></td></tr>
+      <tr><td><code>turboai-notes-{env}-db-password</code></td><td>✅</td><td>✅</td><td>ECS → <code>POSTGRES_PASSWORD</code> (+ RDS master via TF)</td></tr>
+      <tr><td><code>turboai-notes-{env}-llm-credentials</code></td><td>✅ (key set)</td><td>✅ (placeholder until populated)</td><td>Triage Lambda only (MiniMax)</td></tr>
+      <tr><td><code>turboai-notes-{env}-jira-credentials</code></td><td>✅ (enabled + populated)</td><td>❌ not created (<code>jira_enabled=false</code>)</td><td>Triage Lambda only (when enabled)</td></tr>
+    </table>
+    </div>
+
+    <h3>GitHub Secrets — verified presence (names only)</h3>
+    <div class="table-wrap">
+    <table class="tight">
+      <tr><th>Repo</th><th>Repo-level secrets</th><th>Environment <code>staging</code></th><th>Environment <code>prod</code></th></tr>
+      <tr>
+        <td><code>turboai-notes-api</code></td>
+        <td><code>API_URL</code>, <code>AWS_REGION</code>, <code>AWS_ROLE_ARN</code>, <code>DB_PASSWORD</code>, <code>DJANGO_SECRET_KEY</code>, <code>WEB_URL</code></td>
+        <td><code>AWS_REGION</code>, <code>AWS_ROLE_ARN</code>, <code>DB_PASSWORD</code>, <code>DJANGO_SECRET_KEY</code></td>
+        <td><code>API_URL</code>, <code>AWS_REGION</code>, <code>AWS_ROLE_ARN</code>, <code>DB_PASSWORD</code>, <code>DJANGO_SECRET_KEY</code>, <code>WEB_URL</code></td>
+      </tr>
+      <tr>
+        <td><code>turboai-notes-web</code></td>
+        <td><code>API_URL</code>, <code>AWS_REGION</code>, <code>AWS_ROLE_ARN</code>, <code>CLOUDFRONT_ID</code>, <code>WEB_BUCKET</code>, <code>WEB_URL</code></td>
+        <td><code>AWS_REGION</code> only</td>
+        <td><code>API_URL</code>, <code>AWS_REGION</code>, <code>AWS_ROLE_ARN</code>, <code>CLOUDFRONT_ID</code>, <code>WEB_BUCKET</code>, <code>WEB_URL</code></td>
+      </tr>
+    </table>
+    </div>
+    <p>Neither repo has GitHub Actions <strong>variables</strong> (only secrets). MiniMax and Jira credentials are intentionally absent from GitHub.</p>
 
     <div class="callout">
       <div class="callout-title">ℹ️ The "two-hop" path for secrets is intentional</div>
