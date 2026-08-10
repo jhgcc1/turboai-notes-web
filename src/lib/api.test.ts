@@ -1,24 +1,37 @@
 import { formatLastEdited, formatNoteDate } from "./api";
 
 describe("formatNoteDate", () => {
-  const now = new Date("2024-07-21T12:00:00Z");
+  // Local calendar anchors avoid UTC/local day-boundary flakiness.
+  const now = new Date(2024, 6, 21, 12, 0, 0); // Jul 21, 2024
 
-  it("returns today", () => {
-    expect(formatNoteDate("2024-07-21T08:00:00Z", now)).toBe("today");
+  it("returns lowercase today", () => {
+    expect(formatNoteDate(new Date(2024, 6, 21, 8, 0, 0).toISOString(), now)).toBe("today");
   });
 
-  it("returns yesterday", () => {
-    expect(formatNoteDate("2024-07-20T08:00:00Z", now)).toBe("yesterday");
+  it("returns lowercase yesterday", () => {
+    expect(formatNoteDate(new Date(2024, 6, 20, 8, 0, 0).toISOString(), now)).toBe("yesterday");
   });
 
-  it("returns month day", () => {
-    expect(formatNoteDate("2024-06-11T08:00:00Z", now)).toMatch(/June/);
+  it("returns full Month Day without year (Figma/video cards)", () => {
+    // Video frames (e.g. frame_057): "July 16", "June 12" — not "Apr 10", not Title Case relatives.
+    expect(formatNoteDate(new Date(2024, 5, 11, 8, 0, 0).toISOString(), now)).toBe("June 11");
+    expect(formatNoteDate(new Date(2024, 6, 16, 8, 0, 0).toISOString(), now)).toBe("July 16");
   });
 });
 
 describe("formatLastEdited", () => {
-  it("formats timestamp", () => {
-    const text = formatLastEdited("2024-07-21T20:39:00Z");
-    expect(text).toContain("2024");
+  it("matches Figma/video Last Edited shape", () => {
+    // frame_103: "Last Edited: July 21, 2024 at 8:35pm"
+    const local = new Date(2024, 6, 21, 20, 35, 0);
+    expect(formatLastEdited(local.toISOString())).toBe("July 21, 2024 at 8:35pm");
+  });
+
+  it("uses am for morning hours and 12 for midnight/noon", () => {
+    expect(formatLastEdited(new Date(2024, 0, 2, 0, 5, 0).toISOString())).toBe(
+      "January 2, 2024 at 12:05am",
+    );
+    expect(formatLastEdited(new Date(2024, 0, 2, 12, 0, 0).toISOString())).toBe(
+      "January 2, 2024 at 12:00pm",
+    );
   });
 });

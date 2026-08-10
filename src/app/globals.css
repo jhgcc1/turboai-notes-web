@@ -26,3 +26,12 @@ h2,
 .font-display {
   font-family: var(--font-display);
 }
+
+/* Interactive controls show pointer; leave text inputs / disabled alone. */
+button:enabled,
+a[href],
+select,
+label:has(select),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}

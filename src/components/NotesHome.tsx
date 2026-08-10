@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { EmptyNotesState } from "@/components/EmptyNotesState";
 import { api, Category, formatNoteDate, Note } from "@/lib/api";
 
 export function NotesHome() {
@@ -72,25 +73,29 @@ export function NotesHome() {
             + New Note
           </button>
         </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {notes.map((n) => (
-            <Link
-              key={n.id}
-              href={`/notes/edit/?id=${n.id}`}
-              className="block min-h-40 rounded-2xl p-4 shadow-sm transition hover:scale-[1.01]"
-              style={{ background: n.category_color }}
-            >
-              <div className="mb-2 flex justify-between text-xs font-semibold">
-                <span>{formatNoteDate(n.updated_at)}</span>
-                <span>{n.category_name}</span>
-              </div>
-              <h3 className="font-display text-xl font-bold">{n.title || "Note Title"}</h3>
-              <p className="mt-2 line-clamp-5 whitespace-pre-wrap text-sm opacity-90">
-                {n.body || "Note content..."}
-              </p>
-            </Link>
-          ))}
-        </div>
+        {notes.length === 0 ? (
+          <EmptyNotesState />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {notes.map((n) => (
+              <Link
+                key={n.id}
+                href={`/notes/edit/?id=${n.id}`}
+                className="block min-h-40 rounded-2xl p-4 shadow-sm transition hover:scale-[1.01]"
+                style={{ background: n.category_color }}
+              >
+                <div className="mb-2 flex justify-between text-xs font-semibold">
+                  <span>{formatNoteDate(n.updated_at)}</span>
+                  <span>{n.category_name}</span>
+                </div>
+                <h3 className="font-display text-xl font-bold">{n.title || "Note Title"}</h3>
+                <p className="mt-2 line-clamp-5 whitespace-pre-wrap text-sm opacity-90">
+                  {n.body || "Note content..."}
+                </p>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

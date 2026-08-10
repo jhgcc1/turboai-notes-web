@@ -10,7 +10,7 @@ Next.js frontend for the Turbo AI notes-taking hiring challenge.
 
 ## AI tools used
 
-Built with **Cursor Grok 4.5 High Fast**.
+Built end-to-end in **Cursor**. The primary interactive planning/coordination session ran on **Grok 4.5 High Fast** (the model set at kickoff), which turned the hiring-challenge brief into the locked plan in `docs/process/00-MASTER-PLAN.md` and did the initial UI scaffolding. Most of the implementation and polish — component/page build-out, unit test coverage, Figma/video adherence checks, e2e verification (Chrome MCP + curl + DB cross-checks), UI fixes, and this documentation — was delegated to dozens of asynchronous Cursor "Multitask Mode" subagents, which inherited the session's configured model (a mix of Grok 4.5 High Fast and Claude Sonnet 5 across this multi-day session). See [`docs/process/13-ai-development-process.md`](../docs/process/13-ai-development-process.md) for the full writeup, including the verbatim original prompt and a clearly-labeled, methodology-based token/cost estimate.
 
 ## Local
 
