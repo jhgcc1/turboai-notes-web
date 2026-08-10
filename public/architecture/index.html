@@ -510,13 +510,14 @@ flowchart LR
       <tr><td>Required PR approvals</td><td>1</td><td>unprotected</td></tr>
       <tr><td>Dismiss stale reviews</td><td>yes</td><td>—</td></tr>
       <tr><td>Require code owner approval</td><td>no (no <code>CODEOWNERS</code>)</td><td>—</td></tr>
-      <tr><td>Required status checks (CI)</td><td><strong>not configured</strong></td><td>—</td></tr>
+      <tr><td>Required status checks (CI)</td><td><code>quality</code> (strict — branch must be up to date)</td><td>—</td></tr>
       <tr><td>Force-push / delete</td><td>blocked</td><td>allowed</td></tr>
+      <tr><td>Admin bypass (<code>enforce_admins</code>)</td><td>allowed (<code>false</code>)</td><td>—</td></tr>
     </table>
     </div>
-    <div class="callout warn">
-      <div class="callout-title">⚠️ Warning — gap between plan and reality</div>
-      <p><code>docs/process/00-MASTER-PLAN.md</code> lists "branch protection on <code>main</code>" as a pending item. Today there is <strong>1 required approval</strong> on <code>main</code> in both repos, but <strong>CI is not a required status check</strong> — meaning a PR can technically be merged into <code>main</code> even with a red <code>CI</code> workflow, as long as it has 1 approval. The GitHub Environments <code>staging</code>/<code>prod</code> also have no <code>protection_rules</code> (no required reviewer before applying to prod).</p>
+    <div class="callout info">
+      <div class="callout-title">ℹ️ Branch + environment protection (2026-08-10)</div>
+      <p>Both repos require status check <code>quality</code> (the <code>ci.yml</code> job) plus 1 approving review before merge to <code>main</code>. Deploy / ai-review checks are <strong>not</strong> required. GitHub Environment <code>prod</code> requires reviewers <code>jhgcc1</code> or <code>joaocavalcantivt2</code> before <code>environment: prod</code> jobs proceed; <code>staging</code> stays unprotected so merge-to-<code>develop</code> auto-deploys. Details: <code>docs/process/18-branch-and-env-protection.md</code>.</p>
     </div>
   </section>
 
@@ -1349,7 +1350,7 @@ flowchart TD
       <tr><td>Local dev — Docker</td><td><code>backend/docker-compose.yml</code>: <code>db</code> service (Postgres 16, host port 5434), <code>api</code> (port 8000), <code>web</code> (port 3000, built from <code>../frontend</code>)</td></tr>
       <tr><td>Local dev — without Docker</td><td><code>USE_SQLITE=true</code> in <code>.env</code> swaps the compose Postgres backend for local SQLite — faster for just running the test suite (this is also what CI does)</td></tr>
       <tr><td>Open a PR</td><td><code>gh pr create</code> in <code>turboai-notes-api</code> and/or <code>turboai-notes-web</code>, base <code>develop</code></td></tr>
-      <tr><td>Required PR checks</td><td><code>ci.yml</code> (lint + typecheck + tests + 100% coverage) — today it is <strong>not</strong> a required status check on GitHub, but it's team convention to run it and keep it green before requesting review</td></tr>
+      <tr><td>Required PR checks</td><td>On <code>main</code>: status check <code>quality</code> from <code>ci.yml</code> (lint + typecheck + tests + 100% coverage) is <strong>required</strong> (strict). <code>develop</code> is unprotected; keep CI green by convention before review.</td></tr>
       <tr><td>Staging deploy</td><td>Automatic when merged into <code>develop</code> — no manual action</td></tr>
       <tr><td>Testing on staging</td><td>Real CloudFront URLs (section 1), the <code>e2e-notes</code> skill, or <code>db_query</code> via MCP to inspect the database</td></tr>
       <tr><td>Prod deploy</td><td>PR <code>develop</code> → <code>main</code> (1 approval) → published <code>gh release create</code> → <code>deploy.yml</code> (environment <code>prod</code>). Live: web <code>https://doj4lx2n5ynh4.cloudfront.net</code>, API <code>https://djnxnkcoh52pi.cloudfront.net</code> — see <code>docs/process/16-prod-deploy.md</code></td></tr>
