@@ -664,9 +664,9 @@ flowchart TB
       <p>On every API deploy, <code>modules/observability</code> rebuilds the function package with Terraform <code>archive_file</code> from <code>backend/observability/</code> (plus a copy of <code>apps/</code> and <code>config/</code> for source quoting). The zip is ~43&nbsp;KB; there is no Docker image and no extra GitHub workflow for the Lambda. Web deploy never touches it.</p>
     </div>
 
-    <div class="callout warn">
-      <div class="callout-title">⚠️ Warning — real inconsistency between the two <code>deploy.yml</code> files</div>
-      <p>The API's <code>deploy.yml</code> hardcodes <code>AWS_REGION: us-east-2</code> directly in the YAML (ignores any secret). The frontend's, however, uses <code>AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}</code> — if the <code>AWS_REGION</code> secret isn't set in the web repo, it would fall back to <code>us-east-1</code>, the wrong region. Today the secret is correctly configured in both repos, but this is a real code divergence, not a hypothetical one.</p>
+    <div class="callout info">
+      <div class="callout-title">ℹ️ <code>AWS_REGION</code> is a GitHub Actions secret — not AWS Secrets Manager</div>
+      <p>Both repos use <code>AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-2' }}</code>. The value lives in <strong>GitHub Secrets</strong> (repo + staging/prod Environments) as CI/CD config. It is <em>not</em> stored in AWS Secrets Manager — SM only holds app runtime secrets (<code>django-secret-key</code>, <code>db-password</code>, <code>llm-credentials</code>, <code>jira-credentials</code>). The secret is set today on both <code>turboai-notes-api</code> and <code>turboai-notes-web</code>; the <code>us-east-2</code> fallback is a safety net only.</p>
     </div>
     <div class="callout">
       <div class="callout-title">ℹ️ ai-review.yml is not real AI (yet)</div>
@@ -991,11 +991,11 @@ flowchart TB
       </tr>
       <tr>
         <td><code>AWS_REGION</code></td>
-        <td><span class="badge gh">GitHub Secrets</span> (both repos + Environments)</td>
-        <td>Web <code>deploy.yml</code> (<code>secrets.AWS_REGION</code>); API <code>deploy.yml</code> <strong>ignores</strong> it (hardcodes <code>us-east-2</code>)</td>
+        <td><span class="badge gh">GitHub Secrets</span> (both repos + Environments) — <em>not</em> AWS Secrets Manager</td>
+        <td>Both <code>deploy.yml</code> files: <code>secrets.AWS_REGION || 'us-east-2'</code></td>
         <td>Present</td>
         <td>Present</td>
-        <td><strong>Config, not a credential</strong> — stored as a GitHub Secret for workflow injection.</td>
+        <td><strong>Config, not a credential</strong> — GitHub Actions secret for workflow injection; never an SM secret.</td>
       </tr>
       <tr>
         <td><code>API_URL</code>, <code>WEB_URL</code></td>
