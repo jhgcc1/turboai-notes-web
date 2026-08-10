@@ -244,6 +244,7 @@
       <span class="pill" style="background:var(--pending-bg);color:#2e5230;border-color:var(--pending)">✅ Prod — live</span>
       <span class="pill">JWT Cookie + CSRF</span>
       <span class="pill">ECS Fargate (not App Runner)</span>
+      <span class="pill">LLM error triage</span>
       <span class="pill">2 GitHub repositories</span>
     </div>
     <p style="font-size:.82rem; color:var(--muted); margin:.6rem 0 0;">Color convention used throughout the document: <b style="color:var(--live)">■</b> staging (blue) · <b style="color:var(--pending)">■</b> prod (green)</p>
@@ -258,6 +259,7 @@
       <li><a href="#repositorios">GitHub repositories</a></li>
       <li><a href="#cicd">GitHub Actions / CI-CD</a></li>
       <li><a href="#aws">AWS — what does what</a></li>
+      <li><a href="#observability">Observability &amp; error triage</a></li>
       <li><a href="#secrets">Environment variables and secrets</a></li>
       <li><a href="#autenticacao">Authentication</a></li>
       <li><a href="#mcp-skills">MCP and Skills</a></li>
@@ -492,7 +494,7 @@ sequenceDiagram
 
   <section class="card anchor-offset" id="aws">
     <h2>4. AWS — which parts do what</h2>
-    <p class="lede">All Terraform lives in <code>backend/terraform/</code> (a single <code>modules/stack</code> module, reapplied by <code>envs/staging</code> and <code>envs/prod</code>). Remote state in S3 (<code>turboai-notes-tfstate-615737882760</code>) with a DynamoDB lock (<code>turboai-notes-tflock</code>), region <code>us-east-2</code>.</p>
+    <p class="lede">All Terraform lives in <code>backend/terraform/</code> — two modules (<code>modules/stack</code> for the application infrastructure and <code>modules/observability</code> for logs, alarms and error triage), both reapplied by <code>envs/staging</code> and <code>envs/prod</code>. Remote state in S3 (<code>turboai-notes-tfstate-615737882760</code>) with a DynamoDB lock (<code>turboai-notes-tflock</code>), region <code>us-east-2</code>.</p>
 
     <div class="diagram-box">
       <pre class="mermaid">
@@ -512,17 +514,17 @@ flowchart TB
   ECS -->|":5432"| RDS
   BAST -->|"local SSH tunnel → :5432"| RDS
   ECR["ECR turboai-notes-staging"] -. docker image .-> ECS
-  ECS -. logs .-> CW["CloudWatch Logs<br/>/turboai/notes/staging/api (7 days)"]
-  CW -. 5xx metric .-> ALARM["Alarm turboai-notes-staging-5xx<br/>HTTPCode_Target_5XX_Count > 50 / 5min"]
+  ECS -. logs .-> CW["CloudWatch Logs<br/>/turboai/notes/staging/api (7 days; 30 in prod)"]
+  CW -. ERROR metric filter .-> OBS["modules/observability — see section 5<br/>alarms → SNS → triage Lambda → email"]
 
   ROLE_EXEC["IAM Role: ecs-exec<br/>AmazonECSTaskExecutionRolePolicy<br/>+ secretsmanager:GetSecretValue"] -. used by .-> ECS
   ROLE_TASK["IAM Role: ecs-task<br/>logs:PutLogEvents/CreateLogStream"] -. used by .-> ECS
   SM["Secrets Manager<br/>turboai-notes-staging-django-secret-key<br/>turboai-notes-staging-db-password"] -. resolved at startup via ecs-exec .-> ECS
 
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
-  class ALB,ECS,BAST,RDS,ECR,CW,ALARM,ROLE_EXEC,ROLE_TASK,SM live;
+  class ALB,ECS,BAST,RDS,ECR,CW,OBS,ROLE_EXEC,ROLE_TASK,SM live;
       </pre>
-      <div class="caption">Fig. 5 — AWS resource map for <strong>staging</strong> (the only applied environment). Prod would use the same module with CIDR <code>10.1.0.0/16</code>, 7-day backups (vs 1), <code>deletion_protection=true</code>, 14-day log retention (vs 7), and names with a <code>-prod</code> suffix — none of this exists in AWS today.</div>
+      <div class="caption">Fig. 5 — AWS resource map for <strong>staging</strong>. Prod is the same module applied again with CIDR <code>10.1.0.0/16</code>, <code>deletion_protection=true</code>, 30-day log retention (vs 7), tighter alarm thresholds, and names with a <code>-prod</code> suffix. Backups stay at 1 day in both environments (free-tier accounts reject a longer retention). Everything the observability module adds on top of this map is in <a href="#observability">section 5</a>.</div>
     </div>
 
     <h3>Resource inventory by category</h3>
@@ -534,10 +536,12 @@ flowchart TB
       <tr><td><strong>Load balancing</strong></td><td><code>aws_lb</code> (ALB, internet-facing, only an HTTP :80 <code>listener</code>), <code>aws_lb_target_group</code> (health check <code>/api/health/</code>)</td><td>No HTTPS on the ALB — TLS terminates at CloudFront; CloudFront→ALB is plain HTTP (<code>origin_protocol_policy = "http-only"</code>)</td></tr>
       <tr><td><strong>CDN (API)</strong></td><td><code>aws_cloudfront_distribution.api</code></td><td>Default CloudFront certificate (no custom domain); caching disabled (<code>Managed-CachingDisabled</code>)</td></tr>
       <tr><td><strong>Static frontend</strong></td><td><code>aws_s3_bucket.web</code> (private, OAC), <code>aws_cloudfront_distribution.web</code>, <code>aws_cloudfront_function.web_spa_rewrite</code></td><td>CloudFront function rewrites <code>/route/</code> → <code>/route/index.html</code> to match <code>next build -o export</code>; S3 403/404 errors are turned into 200 responses serving <code>index.html</code></td></tr>
-      <tr><td><strong>Database</strong></td><td><code>aws_db_instance.postgres</code> — Postgres 16, <code>db.t4g.micro</code>, 20→50GB, private subnet, <code>publicly_accessible=false</code></td><td>1-day backup (staging) / 7-day (prod); <code>deletion_protection</code> only in prod</td></tr>
-      <tr><td><strong>IAM</strong></td><td>Role <code>ecs-exec</code> (pulls the image + resolves <code>secrets:</code>), Role <code>ecs-task</code> (writes logs only), Bastion role (SSM Core)</td><td>The <code>turboai-notes-github-actions</code> deploy role (OIDC) is created <em>outside</em> Terraform, via a script (<code>scripts/bootstrap-aws-github-oidc.sh</code>)</td></tr>
-      <tr><td><strong>CloudWatch</strong></td><td>Log group <code>/turboai/notes/{env}/api</code>, alarm <code>{env}-5xx</code></td><td>No dashboard or alarm action (SNS) configured</td></tr>
-      <tr><td><strong>Bastion</strong></td><td><code>aws_instance.bastion</code> — <code>t4g.micro</code>, Amazon Linux 2023 ARM64, IMDSv2 required</td><td>Used exclusively for the MCP SSH tunnel (section 7); also reachable via SSM Session Manager</td></tr>
+      <tr><td><strong>Database</strong></td><td><code>aws_db_instance.postgres</code> — Postgres 16, <code>db.t4g.micro</code>, 20→50GB, private subnet, <code>publicly_accessible=false</code></td><td>1-day backup retention in <strong>both</strong> environments (free-tier accounts reject more than 1, <code>FreeTierRestrictionError</code>); <code>deletion_protection</code> and <code>skip_final_snapshot=false</code> only in prod</td></tr>
+      <tr><td><strong>IAM</strong></td><td>Role <code>ecs-exec</code> (pulls the image + resolves <code>secrets:</code>), Role <code>ecs-task</code> (writes logs only), Bastion role (SSM Core), Role <code>{env}-triage</code> (the error-triage Lambda)</td><td>The <code>turboai-notes-github-actions</code> deploy role (OIDC) is created <em>outside</em> Terraform, via a script (<code>scripts/bootstrap-aws-github-oidc.sh</code>). The triage role is narrow: Insights queries on one log group, <code>UpdateItem</code>/<code>GetItem</code> on one table, <code>GetSecretValue</code> on one secret, <code>sns:Publish</code> on the reports topic only.</td></tr>
+      <tr><td><strong>CloudWatch — logs &amp; metrics</strong><br/><small>(<code>modules/observability</code>)</small></td><td>Log group <code>/turboai/notes/{env}/api</code>, log group <code>/aws/lambda/{env}-triage</code>, <code>aws_cloudwatch_log_metric_filter.{env}-app-errors</code>, <code>aws_cloudwatch_dashboard.{env}-observability</code></td><td>App log retention: 7 days staging, <strong>30 days prod</strong>; Lambda logs 14 days. The metric filter matches <code>{ $.level = "ERROR" }</code> and emits <code>AppErrorCount</code> in the <code>turboai/notes/{env}</code> namespace. Dashboard: error count, response classes, latency p50/p95/p99, RDS CPU/connections, live table of recent errors. See <a href="#observability">section 5</a>.</td></tr>
+      <tr><td><strong>Alarms &amp; notifications</strong><br/><small>(<code>modules/observability</code>)</small></td><td>7 <code>aws_cloudwatch_metric_alarm</code> (<code>-app-errors</code>, <code>-5xx</code>, <code>-latency-p95</code>, <code>-no-healthy-hosts</code>, <code>-rds-cpu</code>, <code>-rds-free-storage</code>, <code>-triage-failures</code>), 2 <code>aws_sns_topic</code> (<code>{env}-alarms</code>, <code>{env}-triage-reports</code>) + topic policies, optional <code>aws_sns_topic_subscription</code> (email)</td><td>Debuggable alarms fan into <code>{env}-alarms</code> → triage Lambda; infrastructure alarms go straight to <code>{env}-triage-reports</code> → inbox. The <code>-5xx</code> alarm <strong>moved here</strong> from <code>modules/stack</code> and now has a notification target (thresholds: &gt;10/5&nbsp;min staging, &gt;5 prod).</td></tr>
+      <tr><td><strong>Error triage (serverless)</strong><br/><small>(<code>modules/observability</code>)</small></td><td><code>aws_lambda_function.{env}-triage</code> (python3.12, 512&nbsp;MB, 180&nbsp;s), <code>aws_dynamodb_table.{env}-error-fingerprints</code> (PAY_PER_REQUEST, TTL), <code>aws_secretsmanager_secret.{env}-llm-credentials</code>, <code>aws_lambda_permission</code> + <code>aws_sns_topic_subscription</code> (lambda)</td><td>Zip built by <code>archive_file</code> from the working tree (~43&nbsp;KB, no build step) and carries a copy of <code>apps/</code> + <code>config/</code> so the function can quote the failing source lines. The secret is created with a <code>REPLACE_ME</code> placeholder and <code>ignore_changes</code>, so the MiniMax key never enters the state file.</td></tr>
+      <tr><td><strong>Bastion</strong></td><td><code>aws_instance.bastion</code> — <code>t4g.micro</code>, Amazon Linux 2023 ARM64, IMDSv2 required</td><td>Used exclusively for the MCP SSH tunnel (section 8); also reachable via SSM Session Manager</td></tr>
     </table>
 
     <h3>IAM — GitHub OIDC deploy role (outside Terraform)</h3>
@@ -553,9 +557,187 @@ flowchart TB
     </div>
   </section>
 
+  <section class="card anchor-offset" id="observability">
+    <h2>5. Observability — from a production error to a debugged report</h2>
+    <p class="lede">Structured JSON logs, a CloudWatch metric filter, alarms, and a Lambda that reads the application's own source code, asks an LLM to debug it, and emails a report with a proposed patch. Everything is Terraform in <code>backend/terraform/modules/observability/</code>; the Lambda source is <code>backend/observability/</code>. Reference document: <code>docs/architecture/observability.md</code>.</p>
+
+    <div class="callout warn">
+      <div class="callout-title">⚠️ What this replaced</div>
+      <p>Until 2026-08-10 the only error signal was a single alarm on ALB 5xx counts with a threshold of <strong>50 in five minutes</strong> — and it was wired to <strong>no notification target at all</strong>. Worse, DRF turns exceptions into responses silently: a permission bug returning 403, a serializer rejecting valid input, or a token-refresh loop produced <strong>no log line</strong>, so those failures were invisible even to someone reading CloudWatch by hand.</p>
+    </div>
+
+    <div class="diagram-box">
+      <pre class="mermaid">
+flowchart TB
+  APP["Django + gunicorn on ECS Fargate<br/>DRF exception handler logs JSON + fingerprint"]
+  DRV["awslogs log driver<br/>container stdout, one JSON object per line"]
+  LG["CloudWatch Logs<br/>/turboai/notes/staging/api"]
+  MF["Metric filter turboai-notes-staging-app-errors<br/>matches the JSON level field, not the message text"]
+  MET["Custom metric turboai/notes/staging<br/>AppErrorCount"]
+  ALARM["Alarm turboai-notes-staging-app-errors<br/>Sum of 5 or more in 5 min (prod: 3)"]
+  TAL["SNS topic turboai-notes-staging-alarms"]
+  LAM["Lambda turboai-notes-staging-triage<br/>python3.12, stdlib + boto3, ~43 KB zip"]
+  INS["Logs Insights<br/>sample recent ERROR rows, group by fingerprint"]
+  DDB[("DynamoDB turboai-notes-staging-error-fingerprints<br/>occurrence counter, 72h TTL")]
+  SRC["Bundled source copy<br/>apps/ + config/ under repo/ inside the zip"]
+  LLM["MiniMax-M2.1<br/>root cause + unified diff + repro steps"]
+  TRP["SNS topic turboai-notes-staging-triage-reports"]
+  MAIL["Operator inbox<br/>confirmed email subscription"]
+  INFRA["Infrastructure alarms<br/>no healthy hosts, RDS CPU/storage, triage failures"]
+
+  APP --> DRV --> LG --> MF --> MET --> ALARM --> TAL --> LAM
+  LAM -->|"1. sample the errors behind the alarm"| INS
+  LAM -->|"2. count occurrences, suppress repeats"| DDB
+  LAM -->|"3. resolve traceback frames to real lines"| SRC
+  LAM -->|"4. debug against the code shown"| LLM
+  LAM -->|"5. publish the report"| TRP --> MAIL
+  INFRA -->|"nothing in the app logs to debug"| TRP
+
+  classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
+  class APP,DRV,LG,MF,MET,ALARM,TAL,LAM,INS,DDB,SRC,LLM,TRP,MAIL,INFRA live;
+      </pre>
+      <div class="caption">Fig. 6 — End-to-end path for <strong>staging</strong> (prod is the same module with lower thresholds). Nobody has to watch a dashboard: the first email about a new bug arrives with the failing source lines and a candidate patch already in it.</div>
+    </div>
+
+    <h3>Two SNS topics, on purpose</h3>
+    <p>Alarms the Lambda can actually debug from application logs publish to <code>turboai-notes-{env}-alarms</code>; the Lambda publishes its report to <code>turboai-notes-{env}-triage-reports</code>. <strong>With a single topic the function would subscribe to its own output and re-trigger itself indefinitely.</strong> The split has a second benefit: infrastructure alarms that no application log line can explain (no healthy hosts, RDS CPU and free storage, and the triage Lambda's own failures) publish straight to the reports topic, so they reach the operator without a pointless round trip through the LLM.</p>
+
+    <h3>Structured logging</h3>
+    <p>Every log line is a single JSON object produced by <code>JsonFormatter</code> in <code>config/middleware.py</code>, carrying <code>level</code>, <code>logger</code>, <code>message</code>, <code>time</code>, <code>service</code>, <code>environment</code>, plus whatever the call site passed as <code>extra</code>: <code>request_id</code>, <code>route</code>, <code>method</code>, <code>status</code>, <code>duration_ms</code>, <code>user_id</code>, <code>error_type</code>, <code>fingerprint</code>, and the full <code>exc_info</code> traceback on errors. <code>service</code> and <code>environment</code> come from the process environment (<code>SERVICE_NAME</code>, <code>ENVIRONMENT</code>) rather than <code>django.conf.settings</code>, because <code>LOGGING</code> is applied while settings are still being imported.</p>
+
+    <h4>Where errors are captured</h4>
+    <table class="tight">
+      <tr><th>Source</th><th>Level</th><th>What it logs</th></tr>
+      <tr><td><code>config/exception_handler.py</code></td><td>ERROR for 5xx, <strong>WARNING for 4xx</strong></td><td>Every DRF exception — <code>turbo_exception_handler</code> is wired as <code>REST_FRAMEWORK["EXCEPTION_HANDLER"]</code>, logs with <code>exc_info</code> and a fingerprint, then defers to DRF for the actual response shape</td></tr>
+      <tr><td><code>config/middleware.py</code></td><td>INFO / ERROR</td><td>One INFO line per request (<code>route</code>, <code>status</code>, <code>duration_ms</code>, <code>request_id</code>) plus an ERROR line for any response with status ≥ 500</td></tr>
+      <tr><td><code>apps/accounts/views.py</code></td><td>WARNING</td><td>Token blacklist and refresh rejections that used to be swallowed by a bare <code>except: pass</code></td></tr>
+    </table>
+    <p>4xx stays at WARNING deliberately: logging client mistakes at ERROR would make the alarm — and the whole triage automation behind it — fire on ordinary bad requests.</p>
+
+    <div class="callout warn">
+      <div class="callout-title">⚠️ The metric filter matches <code>$.level</code>, not the string <code>[ERROR]</code></div>
+      <p>ERROR lines get an <code>[ERROR]</code> prefix in their <code>message</code> so they stay greppable in plain-text views (the ECS console, <code>docker logs</code>, MCP <code>logs_tail</code>). The alarm, however, filters on the JSON field:</p>
+      <pre><code>pattern = "{ $.level = \"ERROR\" }"</code></pre>
+      <p>Matching the literal text instead would mean <strong>a user creating a note whose body contains "[ERROR]" could raise a false alarm</strong> and burn an LLM call on a non-incident.</p>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-title">ℹ️ One log shipper, not two</div>
+      <p><code>watchtower</code> used to run inside Django alongside the ECS <code>awslogs</code> driver, sending every line to the same log group twice — double ingest cost and <em>double counting</em> on the metric filter that triggers triage. The task definition now sets <code>CLOUDWATCH_ENABLED=false</code> and relies on the driver. Turn watchtower back on only for a runtime that does not forward stdout, such as a plain EC2 process.</p>
+    </div>
+
+    <h3>Fingerprints and deduplication</h3>
+    <p><code>config/fingerprint.py</code> hashes three things into a 16-character key: the <strong>exception type</strong>, the <strong>normalised route</strong> (numeric and UUID path segments are collapsed, so <code>/api/notes/42/</code> and <code>/api/notes/43/</code> share one route), and the <strong>deepest non-vendor traceback frame</strong>. The exception <em>message</em> is deliberately excluded — messages usually embed ids, emails or values that differ between occurrences of the same bug, which would split one recurring bug into a new fingerprint, and a new email, on every single call.</p>
+    <p>State lives in DynamoDB (<code>turboai-notes-{env}-error-fingerprints</code>), keyed by fingerprint. A single <code>UpdateItem</code> with <code>ReturnValues="ALL_OLD"</code> both increments the counter and reveals whether this was the first sighting, which avoids the read-then-write race that would let two concurrent alarm deliveries both decide they are first.</p>
+    <table class="tight">
+      <tr><th>Situation</th><th>Behaviour</th></tr>
+      <tr><td>First sighting of a fingerprint</td><td>Send a report, subject prefixed <code>NEW</code></td></tr>
+      <tr><td>Afterwards</td><td>Send only every <code>RESEND_EVERY</code> occurrences (default 10), subject prefixed <code>RECURRING</code></td></tr>
+      <tr><td>After <code>DEDUP_TTL_HOURS</code> (default 72)</td><td>The record expires, so a bug that goes quiet and comes back counts as new again</td></tr>
+      <tr><td>Alarm stays in ALARM state</td><td>Suppressed — without the counter, every evaluation period would email</td></tr>
+      <tr><td>Alarm state is OK / INSUFFICIENT_DATA</td><td>Skipped: a state change is not an incident</td></tr>
+    </table>
+
+    <h3>How the Lambda reads the source code</h3>
+    <p>This is the part that makes the email a debugging report rather than a log forward. Terraform's <code>archive_file</code> adds a copy of <code>apps/</code> and <code>config/</code> to the zip under <code>repo/</code>, straight from the working tree — no build step, no Lambda layer, about 43&nbsp;KB zipped. At runtime <code>triage/repo.py</code>:</p>
+    <ol>
+      <li>Parses the traceback frames, discarding <code>site-packages</code>, <code>dist-packages</code> and stdlib frames.</li>
+      <li>Resolves each frame's container path (<code>/app/apps/notes/views.py</code>) to a bundled file by matching progressively shorter path suffixes — container and bundle paths only share a suffix, so an exact match is not enough.</li>
+      <li>Reads a line-numbered window around the failing line (±40 lines, <code>CODE_WINDOW_LINES</code>).</li>
+      <li>Orders the excerpts deepest-frame-first, since that is where the exception actually surfaced.</li>
+    </ol>
+    <p><strong>The repository is never sent wholesale.</strong> Selection is traceback-driven and capped by a total character budget (<code>CODE_CONTEXT_CHARS</code>, default 24000). When no project frame can be resolved, it falls back to mapping the failing route to an app directory — <code>/api/notes/</code> → <code>apps/notes/{views,serializers,services,models,permissions}.py</code>.</p>
+    <p>The model receives the failing request, the traceback, a compact file index of the bundle, the resolved source excerpts, and a sample of other recent occurrences of the same fingerprint. It is asked for a root cause <em>grounded in the code shown</em>, suspected <code>file:line</code> locations, a unified diff, fix steps, reproduction steps, a severity, and a confidence rating.</p>
+
+    <h4>Lambda layout (<code>backend/observability/</code>)</h4>
+    <table class="tight">
+      <tr><th>File</th><th>Responsibility</th></tr>
+      <tr><td><code>handler.py</code></td><td>Entrypoint <code>handler.main</code>: unwraps the SNS envelope (or a direct invocation payload), then runs the pipeline per alarm. One failing alarm never drops the rest of the batch.</td></tr>
+      <tr><td><code>triage/settings.py</code></td><td>Environment variables and Secrets Manager lookup (cached for the life of the container).</td></tr>
+      <tr><td><code>triage/logs.py</code></td><td>Logs Insights query (<code>filter level = "ERROR"</code>), polling, and grouping by fingerprint — most frequent group first, so triage targets the loudest bug.</td></tr>
+      <tr><td><code>triage/dedup.py</code></td><td>DynamoDB counters; also <code>attach_issue()</code>, unused today, for recording a ticket key against a fingerprint.</td></tr>
+      <tr><td><code>triage/repo.py</code></td><td>Traceback → source excerpts, as described above.</td></tr>
+      <tr><td><code>triage/llm.py</code></td><td>MiniMax chat completions (OpenAI-compatible <code>/chat/completions</code>) plus defensive JSON parsing into a structured <code>Analysis</code>.</td></tr>
+      <tr><td><code>triage/notify.py</code></td><td>Plain-text report rendering; SNS delivery, or SES when <code>SES_FROM</code>/<code>SES_TO</code> are configured.</td></tr>
+      <tr><td><code>triage/httpjson.py</code></td><td><code>urllib</code> JSON POST helper.</td></tr>
+      <tr><td><code>tests/</code></td><td>Unit tests with no network and no AWS — <code>boto3</code> is imported lazily inside the functions that need it, and clients are injectable.</td></tr>
+    </table>
+    <p>The only dependencies are the standard library and the <code>boto3</code> that the Python 3.12 runtime already provides. That is what keeps the artifact small enough to be assembled by Terraform itself, with no packaging pipeline to keep in sync.</p>
+
+    <div class="callout info">
+      <div class="callout-title">ℹ️ Everything degrades, so a report always goes out</div>
+      <p>A provider outage, an empty response, or unparsable JSON produces a <code>degraded</code> analysis that carries the raw model output, and the email is still sent with the logs and the traceback. The response parser locates the first <em>balanced</em> JSON object after stripping <code>&lt;think&gt;</code> blocks, because reasoning models wrap answers in prose even when told not to. An SES failure falls back to SNS.</p>
+    </div>
+
+    <h3>Alarms</h3>
+    <table class="tight">
+      <tr><th>Alarm</th><th>Metric</th><th>Condition (staging / prod)</th><th>Routes to</th></tr>
+      <tr><td><code>{env}-app-errors</code></td><td><code>AppErrorCount</code> (log metric filter)</td><td>Sum ≥ 5 / 5 min (prod: ≥ 3)</td><td><code>{env}-alarms</code> → triage Lambda</td></tr>
+      <tr><td><code>{env}-5xx</code></td><td><code>HTTPCode_Target_5XX_Count</code></td><td>Sum &gt; 10 / 5 min (prod: &gt; 5)</td><td><code>{env}-alarms</code> → triage Lambda</td></tr>
+      <tr><td><code>{env}-latency-p95</code></td><td><code>TargetResponseTime</code> p95</td><td>&gt; 2 s for 2 consecutive 5-min periods</td><td><code>{env}-alarms</code> → triage Lambda</td></tr>
+      <tr><td><code>{env}-no-healthy-hosts</code></td><td><code>HealthyHostCount</code></td><td>Minimum &lt; 1 for 3 min (missing data treated as breaching)</td><td><code>{env}-triage-reports</code> → email</td></tr>
+      <tr><td><code>{env}-rds-cpu</code></td><td>RDS <code>CPUUtilization</code></td><td>&gt; 85% average for 15 min</td><td><code>{env}-triage-reports</code> → email</td></tr>
+      <tr><td><code>{env}-rds-free-storage</code></td><td>RDS <code>FreeStorageSpace</code></td><td>&lt; 2 GiB (of 20 GiB allocated)</td><td><code>{env}-triage-reports</code> → email</td></tr>
+      <tr><td><code>{env}-triage-failures</code></td><td>Lambda <code>Errors</code></td><td>≥ 1 in 5 min</td><td><code>{env}-triage-reports</code> → email</td></tr>
+    </table>
+    <p><code>HealthyHostCount</code> is used instead of the ECS <code>RunningTaskCount</code> metric because the latter requires Container Insights, which is not enabled on this cluster. The <code>-triage-failures</code> alarm publishes to the reports topic specifically so that a broken triage function can never trigger itself.</p>
+
+    <h3>Configuration knobs</h3>
+    <table class="tight">
+      <tr><th>Lambda env var</th><th>Default</th><th>Effect</th></tr>
+      <tr><td><code>CW_LOG_GROUP</code>, <code>ENVIRONMENT</code>, <code>DEDUP_TABLE</code>, <code>SNS_TOPIC_ARN</code>, <code>LLM_SECRET_ID</code></td><td>set by Terraform</td><td>Wiring; the invocation fails fast with a <code>ConfigError</code> if any of these is missing</td></tr>
+      <tr><td><code>LOOKBACK_MINUTES</code></td><td><code>15</code></td><td>How far back the Insights query samples when an alarm fires</td></tr>
+      <tr><td><code>RESEND_EVERY</code></td><td><code>10</code></td><td>After the first report, re-notify every N occurrences of a fingerprint</td></tr>
+      <tr><td><code>DEDUP_TTL_HOURS</code></td><td><code>72</code></td><td>How long a fingerprint stays suppressed before counting as new</td></tr>
+      <tr><td><code>LLM_BASE_URL</code>, <code>LLM_MODEL</code></td><td><code>https://api.minimax.io/v1</code>, <code>MiniMax-M2.1</code></td><td>Any OpenAI-compatible provider works by swapping these two (values in the secret win over the env vars)</td></tr>
+      <tr><td><code>SES_FROM</code>, <code>SES_TO</code></td><td>empty</td><td>Empty keeps delivery on SNS; setting both switches to SES and grants the role <code>ses:SendEmail</code></td></tr>
+      <tr><td><code>DRY_RUN</code></td><td><code>false</code></td><td>Runs the whole pipeline <strong>including the LLM call</strong> and writes the report to the function's own logs instead of emailing it</td></tr>
+      <tr><td><code>MAX_EVENTS</code>, <code>CODE_CONTEXT_CHARS</code>, <code>CODE_WINDOW_LINES</code></td><td><code>25</code>, <code>24000</code>, <code>40</code></td><td>Sample size and prompt budget. These three have no Terraform variable yet — they fall back to the code defaults in <code>triage/settings.py</code>.</td></tr>
+    </table>
+
+    <h3>Operating it</h3>
+    <h4>One-time setup after <code>terraform apply</code></h4>
+    <p>Two manual steps, both unavoidable by design:</p>
+    <ol>
+      <li><strong>Confirm the email subscription.</strong> Set <code>ops_email</code> (via <code>TF_VAR_ops_email</code> or the default in the env's <code>main.tf</code>) and click the link AWS sends. Until it is confirmed, nothing is delivered. Left empty, Terraform creates the topics with no subscriber.</li>
+      <li><strong>Populate the MiniMax key out of band.</strong> Terraform creates the secret with a <code>REPLACE_ME</code> placeholder and <code>ignore_changes</code> on its value, so the real key never enters a tfvars file, the state file, or version control:
+        <pre><code>aws secretsmanager put-secret-value \
+  --secret-id "$(terraform output -raw llm_secret_arn)" \
+  --secret-string '{"api_key":"sk-...","base_url":"https://api.minimax.io/v1","model":"MiniMax-M2.1"}'</code></pre>
+      </li>
+    </ol>
+
+    <h4>Verifying it end to end</h4>
+    <p>The function treats a bare payload as an alarm, so it can be exercised without waiting for a real incident:</p>
+    <pre><code>aws lambda invoke \
+  --function-name "$(terraform output -raw triage_function_name)" \
+  --payload '{"AlarmName":"manual-test","NewStateValue":"ALARM"}' \
+  --cli-binary-format raw-in-base64-out /dev/stdout</code></pre>
+    <p>With no ERROR line in the lookback window the run reports <code>skipped: no ERROR log events in window</code>, which also confirms the wiring. Set <code>DRY_RUN=true</code> to rehearse the full pipeline, LLM call included, without sending mail.</p>
+
+    <h4>When a report lands in the inbox</h4>
+    <p>The subject is <code>[{env}] NEW|RECURRING SEVERITY: one-line summary</code>. The body carries the environment, alarm, severity and model confidence, occurrence counts, the fingerprint, the failing endpoint and status, the root cause, suspected <code>file:line</code> locations, the proposed patch and fix steps, reproduction steps, the source files that were inspected, and the original log event with its traceback. A useful order of operations:</p>
+    <ol>
+      <li>Read the severity and the occurrence count — <code>RECURRING</code> with a high count is a live regression, a one-off <code>NEW</code> may be a probe or a bad client.</li>
+      <li>Check the suspected locations against the quoted excerpts. <strong>The analysis is LLM-generated and the report says so — verify before acting on it.</strong> A <code>degraded</code> note at the top means the model call failed and only raw log data is included.</li>
+      <li>Pull the surrounding context with MCP <code>logs_insights</code> filtered on the fingerprint (see <a href="#mcp-skills">section 8</a>), or open the <code>{env}-observability</code> dashboard for the blast radius.</li>
+      <li>Fix it on a branch through the normal flow in <a href="#guia-feature">section 9</a>. The fingerprint stays stable across occurrences, so the same bug reappearing after 72 h will read as <code>NEW</code> again — a signal the fix did not hold.</li>
+    </ol>
+
+    <div class="callout">
+      <div class="callout-title">ℹ️ Cost</div>
+      <p>Within the free tier at this traffic level: the metric filter and alarms are free up to 10 alarms (7 are used), Lambda invocations are negligible, DynamoDB is on-demand, and SNS email is free up to 1,000 notifications. The only variable cost is the LLM call — a few cents per <em>distinct</em> error, which is exactly what fingerprint deduplication is protecting.</p>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-title">⚠️ Jira integration was removed — and how to plug it back in</div>
+      <p>Ticket creation was dropped because the Atlassian account has <strong>no Jira site</strong> ("Supported sites required" during OAuth), so delivery is email-only. The pieces that make it easy to add later are still in the code on purpose: a stable fingerprint, a DynamoDB record to store an issue key against (<code>dedup.attach_issue</code>), and a structured <code>Analysis</code> object instead of free-form text. To wire it up: create a Jira Cloud site and project, add a Secrets Manager secret holding <code>base_url</code>, <code>email</code> and <code>api_token</code>, then post the analysis to <code>POST /rest/api/3/issue</code> (the description field takes Atlassian Document Format, not markdown) from a new branch in <code>handler.process_alarm</code> next to <code>send_report</code>.</p>
+    </div>
+  </section>
+
   <section class="card anchor-offset" id="secrets">
-    <h2>5. Environment variables and secrets — where each one lives</h2>
-    <p class="lede">There are <strong>four</strong> places where configuration/secrets live, each with a different purpose. The table below was verified directly against <code>terraform/modules/stack/main.tf</code>, the <code>deploy.yml</code> workflows, and <code>docs/process/04-github-secrets.md</code> / <code>07-security-audit.md</code>.</p>
+    <h2>6. Environment variables and secrets — where each one lives</h2>
+    <p class="lede">There are <strong>four</strong> places where configuration/secrets live, each with a different purpose. The table below was verified directly against <code>terraform/modules/stack/main.tf</code> and <code>terraform/modules/observability/main.tf</code>, the <code>deploy.yml</code> workflows, and <code>docs/process/04-github-secrets.md</code> / <code>07-security-audit.md</code>.</p>
 
     <div class="legend">
       <div><span class="badge gh">GitHub Secrets</span> used only by CI/CD, never reach the container runtime</div>
@@ -574,7 +756,9 @@ flowchart TB
       <tr><td><code>WEB_BUCKET</code>, <code>CLOUDFRONT_ID</code></td><td><span class="badge gh">GitHub Secrets</span> (web repo)</td><td>Used only in the frontend's <code>deploy.yml</code>: <code>aws s3 sync</code> and <code>cloudfront create-invalidation</code>.</td></tr>
       <tr><td><code>SECRET_KEY</code> (runtime)</td><td><span class="badge sm">AWS Secrets Manager</span> <code>turboai-notes-{env}-django-secret-key</code></td><td>Task definition <code>secrets:</code> block (<code>valueFrom</code> = ARN) — <strong>never appears in plain text</strong> in the task definition or the ECS console.</td></tr>
       <tr><td><code>POSTGRES_PASSWORD</code> (runtime)</td><td><span class="badge sm">AWS Secrets Manager</span> <code>turboai-notes-{env}-db-password</code></td><td>Same — <code>secrets:</code> block.</td></tr>
-      <tr><td><code>ENVIRONMENT</code>, <code>DEBUG</code>, <code>POSTGRES_DB/USER/HOST/PORT</code>, <code>ALLOWED_HOSTS</code>, <code>COOKIE_SECURE</code>, <code>COOKIE_SAMESITE</code>, <code>CLOUDWATCH_ENABLED/LOG_GROUP</code>, <code>AWS_REGION</code>, <code>CORS_ALLOWED_ORIGINS</code>, <code>CSRF_TRUSTED_ORIGINS</code>, <code>FRONTEND_URL</code></td><td><span class="badge env">ECS task definition — <code>environment</code> (plain text)</span></td><td>Set directly by Terraform in <code>container_definitions[0].environment</code>. Not secrets — but visible via <code>describe-task-definition</code>.</td></tr>
+      <tr><td>MiniMax <code>api_key</code> / <code>base_url</code> / <code>model</code> (runtime, triage Lambda)</td><td><span class="badge sm">AWS Secrets Manager</span> <code>turboai-notes-{env}-llm-credentials</code></td><td>Terraform creates the secret with a <code>REPLACE_ME</code> placeholder and <code>ignore_changes</code> on its value; the real key is written once with <code>aws secretsmanager put-secret-value</code>, so it never reaches a tfvars file, the state file, or git. The Lambda reads it at runtime via <code>LLM_SECRET_ID</code> and caches it per container — it is <strong>not</strong> a Lambda environment variable, since those are readable with <code>lambda:GetFunctionConfiguration</code>. See <a href="#observability">section 5</a>.</td></tr>
+      <tr><td><code>ENVIRONMENT</code>, <code>DEBUG</code>, <code>POSTGRES_DB/USER/HOST/PORT</code>, <code>ALLOWED_HOSTS</code>, <code>COOKIE_SECURE</code>, <code>COOKIE_SAMESITE</code>, <code>SERVICE_NAME</code>, <code>CLOUDWATCH_ENABLED</code> (<code>false</code>) / <code>CLOUDWATCH_LOG_GROUP</code>, <code>AWS_REGION</code>, <code>CORS_ALLOWED_ORIGINS</code>, <code>CSRF_TRUSTED_ORIGINS</code>, <code>FRONTEND_URL</code></td><td><span class="badge env">ECS task definition — <code>environment</code> (plain text)</span></td><td>Set directly by Terraform in <code>container_definitions[0].environment</code>. Not secrets — but visible via <code>describe-task-definition</code>. <code>CLOUDWATCH_ENABLED</code> is <strong><code>false</code></strong>: the <code>awslogs</code> driver already ships stdout, so watchtower would duplicate every line (<a href="#observability">section 5</a>).</td></tr>
+      <tr><td><code>ops_email</code> (Terraform input)</td><td><span class="badge local">Operator shell (<code>TF_VAR_ops_email</code>) or the default in <code>terraform/envs/{staging,prod}/main.tf</code></span></td><td>Not a secret: the address subscribed to <code>turboai-notes-{env}-triage-reports</code>. Empty by default, which creates the topic with no subscriber; AWS sends a confirmation link that must be clicked before any report is delivered.</td></tr>
       <tr><td><code>SECRET_KEY=unsafe-dev-only-key</code>, <code>POSTGRES_PASSWORD=turbo_dev_password</code>, etc.</td><td><span class="badge local">Local file <code>backend/.env</code></span> (gitignored)</td><td>Read via <code>python-dotenv</code> in <code>config/settings.py</code>. <code>.env.example</code> documents the keys without real values.</td></tr>
       <tr><td>Bastion SSH private key (<code>~/turbo-notes-bastion.pem</code>)</td><td><span class="badge local">Operator's disk</span> (outside the repo)</td><td>Used by the MCP (<code>tools/tunnel.py</code>) and for manual SSH. Only the <strong>public</strong> key (<code>terraform/bastion.pub</code>) is version-controlled.</td></tr>
     </table>
@@ -601,7 +785,7 @@ flowchart TB
   </section>
 
   <section class="card anchor-offset" id="autenticacao">
-    <h2>6. Authentication</h2>
+    <h2>7. Authentication</h2>
     <p class="lede">JWT (SimpleJWT) stored in <code>httpOnly</code> cookies, with CSRF via a <em>double-submit cookie</em> adapted for two different CloudFront domains (frontend and API do not share an origin).</p>
 
     <h3>Cookies and flags</h3>
@@ -648,7 +832,7 @@ sequenceDiagram
   FE->>API: POST /api/notes/ (Cookie access_token, no X-CSRFToken)
   API-->>FE: 403 "CSRF Failed: ..."
       </pre>
-      <div class="caption">Fig. 6 — Full flow: CSRF bootstrap → login → authenticated mutable request. Verified live on staging: no <code>X-CSRFToken</code> → 403; with the header → 200/201.</div>
+      <div class="caption">Fig. 7 — Full flow: CSRF bootstrap → login → authenticated mutable request. Verified live on staging: no <code>X-CSRFToken</code> → 403; with the header → 200/201.</div>
     </div>
 
     <h3>Implementation details</h3>
@@ -679,7 +863,7 @@ sequenceDiagram
   </section>
 
   <section class="card anchor-offset" id="mcp-skills">
-    <h2>7. MCP and Skills — how they work</h2>
+    <h2>8. MCP and Skills — how they work</h2>
     <p class="lede">Two automation layers sit beside the app code: the <strong>AWS MCP</strong> (<code>backend/mcp/</code>) lets a Cursor agent operate staging/prod AWS safely, and two <strong>Cursor skills</strong> (<code>.cursor/skills/</code>) encode repeatable review and e2e loops. Neither replaces Django/Next.js business logic or GitHub Actions CI — they amplify operator workflows.</p>
 
     <h3>AWS MCP (<code>backend/mcp/</code>) — what it is</h3>
@@ -704,7 +888,7 @@ flowchart LR
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
   class MCP,Bastion,RDS,AWSAPI live;
       </pre>
-      <div class="caption">Fig. 7 — MCP data path: SSO/logs hit AWS APIs directly; database tools require an SSH tunnel through the IP-restricted bastion.</div>
+      <div class="caption">Fig. 8 — MCP data path: SSO/logs hit AWS APIs directly; database tools require an SSH tunnel through the IP-restricted bastion.</div>
     </div>
 
     <h4>Tool groups</h4>
@@ -716,8 +900,13 @@ flowchart LR
       <tr><td>Database (read)</td><td><code>db_ping</code>, <code>db_query</code>, <code>db_list_schemas</code>, <code>db_list_tables</code>, <code>db_describe_table</code></td><td>Read-only SQL allowlist (<code>select/with/show/explain/values/table</code>) — staging <strong>and</strong> prod</td></tr>
       <tr><td>Database (write)</td><td><code>db_execute</code></td><td>Staging only with <code>confirm=true</code>; <strong>hard-refused</strong> for prod before connect</td></tr>
       <tr><td>Seed</td><td><code>seed_staging</code></td><td>Staging only; prefers <code>POST /api/seed/</code> so app validations still run</td></tr>
-      <tr><td>Logs</td><td><code>logs_list_groups</code>, <code>logs_tail</code>, <code>logs_insights</code></td><td>CloudWatch under the <code>/turboai/notes</code> prefix — no tunnel required</td></tr>
+      <tr><td>Logs</td><td><code>logs_list_groups</code>, <code>logs_tail</code>, <code>logs_insights</code></td><td>CloudWatch under the <code>/turboai/notes</code> prefix — no tunnel required. Every line is a JSON object (<a href="#observability">section 5</a>): query with <code>filter level = "ERROR"</code> or <code>filter fingerprint = "…"</code> in <code>logs_insights</code>; in <code>logs_tail</code> the <code>[ERROR]</code> message prefix is what makes errors greppable in plain text.</td></tr>
     </table>
+
+    <div class="callout info">
+      <div class="callout-title">ℹ️ MCP logs are the manual counterpart to automated triage</div>
+      <p>The triage Lambda in <a href="#observability">section 5</a> already emails a report — with the failing source lines and a proposed patch — the first time a fingerprint appears. The MCP log tools are for what comes next: pulling the surrounding requests, checking whether a fix actually stopped the errors, or investigating something that never crossed an alarm threshold. Reach for them <em>after</em> a report, not instead of one.</p>
+    </div>
 
     <div class="callout warn">
       <div class="callout-title">⚠️ Staging vs prod guardrails (enforced in code)</div>
@@ -735,7 +924,9 @@ flowchart LR
     <h3>Decision guide — "I want X → use Y"</h3>
     <table>
       <tr><th>I want to...</th><th>Use this</th></tr>
-      <tr><td>See recent API error logs on staging</td><td>MCP <code>logs_tail</code> or <code>logs_insights</code> (<code>env="staging"</code>)</td></tr>
+      <tr><td>See recent API error logs on staging</td><td>MCP <code>logs_tail</code> or <code>logs_insights</code> (<code>env="staging"</code>) — filter on <code>level = "ERROR"</code></td></tr>
+      <tr><td>Dig into one specific bug an alarm already reported</td><td>MCP <code>logs_insights</code> filtered on the <code>fingerprint</code> from the triage email, or the <code>{env}-observability</code> dashboard (<a href="#observability">section 5</a>)</td></tr>
+      <tr><td>Be told about a production error without watching anything</td><td>Nothing to run — the triage Lambda emails a report with a proposed fix (<a href="#observability">section 5</a>)</td></tr>
       <tr><td>Run a read-only query against staging <em>or</em> prod DB</td><td>MCP <code>tunnel_start</code> then <code>db_query</code> — always ask which env first</td></tr>
       <tr><td>Insert/update rows in the database</td><td>MCP <code>db_execute(env="staging", confirm=true)</code> — never prod</td></tr>
       <tr><td>Populate demo data the app way</td><td><code>POST /api/seed/</code> on staging (MCP <code>seed_staging</code> points here)</td></tr>
@@ -756,7 +947,7 @@ flowchart LR
   </section>
 
   <section class="card anchor-offset" id="guia-feature">
-    <h2>8. How to build a new feature (practical guide)</h2>
+    <h2>9. How to build a new feature (practical guide)</h2>
     <p class="lede">A hypothetical step-by-step using <strong>"add tags to notes"</strong> as an example — a feature that would touch the backend, frontend, database, and both deploy pipelines.</p>
 
     <div class="diagram-box">
@@ -780,7 +971,7 @@ flowchart TD
   class A,B,C,D,E,F,G,H,I,J,K live;
   class L,M prod;
       </pre>
-      <div class="caption">Fig. 8 — Full lifecycle of a feature, from code to staging and (via Release) prod.</div>
+      <div class="caption">Fig. 9 — Full lifecycle of a feature, from code to staging and (via Release) prod.</div>
     </div>
 
     <h3>Where each piece fits, in detail</h3>
@@ -819,7 +1010,7 @@ docker compose up --build
   </section>
 
   <section class="card anchor-offset" id="docker">
-    <h2>9. Docker &amp; Docker Compose — exact scope of each file</h2>
+    <h2>10. Docker &amp; Docker Compose — exact scope of each file</h2>
     <p class="lede">There are three Dockerfiles/compose files in this monorepo. It's easy to assume all of it goes to AWS — <strong>it doesn't</strong>. Only one piece (the backend image) makes it to production; the rest is a local development tool.</p>
 
     <table>
@@ -853,10 +1044,10 @@ flowchart LR
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
   class DB,API_L,WEB_L,IMG,ECRX,ECSX,RDSX,NEXT,S3X,CFX live;
       </pre>
-      <div class="caption">Fig. 9 — <code>docker-compose.yml</code> and the frontend <code>Dockerfile</code> only exist on the left side (the developer's laptop). On AWS, only the <code>backend/Dockerfile</code> image survives — the frontend becomes static files on S3/CloudFront.</div>
+      <div class="caption">Fig. 10 — <code>docker-compose.yml</code> and the frontend <code>Dockerfile</code> only exist on the left side (the developer's laptop). On AWS, only the <code>backend/Dockerfile</code> image survives — the frontend becomes static files on S3/CloudFront.</div>
     </div>
 
-    <h3>Local commands (identical to those in section 8)</h3>
+    <h3>Local commands (identical to those in section 9)</h3>
     <pre><code>cd backend
 cp .env.example .env
 docker compose up --build
@@ -874,8 +1065,8 @@ docker compose up --build
 </div>
 
 <footer>
-  <p><strong>Sources verified for this document:</strong> source code of <code>backend/</code> and <code>frontend/</code> (settings, views, models, urls, <code>docker-compose.yml</code>, <code>package.json</code>), all Terraform in <code>backend/terraform/</code>, the <code>.github/workflows/*.yml</code> workflows of both repositories, <code>backend/mcp/server.py</code> + <code>tools/db_env.py</code> + <code>config.py</code>, <code>.cursor/skills/*/SKILL.md</code>, and <code>docs/process/00-MASTER-PLAN.md</code>, <code>04-github-secrets.md</code>, <code>05-aws-iam-setup.md</code>, <code>06-staging-deploy.md</code>, <code>07-security-audit.md</code>, <code>10-csrf-cross-origin-fix.md</code>. No resource, secret, or workflow behavior was invented; where reality diverges from the original plan (e.g., App Runner → ECS Fargate, incomplete branch protection), that is explicitly flagged in the warning boxes above.</p>
-  <p>Generated on 2026-08-09. Diagrams rendered with <a href="https://mermaid.js.org/" target="_blank" rel="noopener">Mermaid.js</a> (local copy at <code>vendor/mermaid.min.js</code>, with CDN fallback).</p>
+  <p><strong>Sources verified for this document:</strong> source code of <code>backend/</code> and <code>frontend/</code> (settings, views, models, urls, <code>docker-compose.yml</code>, <code>package.json</code>), all Terraform in <code>backend/terraform/</code> (modules <code>stack</code> and <code>observability</code>), the <code>.github/workflows/*.yml</code> workflows of both repositories, <code>backend/mcp/server.py</code> + <code>tools/db_env.py</code> + <code>config.py</code>, <code>backend/observability/</code> (<code>handler.py</code> + <code>triage/*.py</code>) and <code>backend/config/{exception_handler,fingerprint,middleware}.py</code>, <code>.cursor/skills/*/SKILL.md</code>, and <code>docs/architecture/observability.md</code>, <code>docs/process/00-MASTER-PLAN.md</code>, <code>04-github-secrets.md</code>, <code>05-aws-iam-setup.md</code>, <code>06-staging-deploy.md</code>, <code>07-security-audit.md</code>, <code>10-csrf-cross-origin-fix.md</code>. No resource, secret, or workflow behavior was invented; where reality diverges from the original plan (e.g., App Runner → ECS Fargate, incomplete branch protection), that is explicitly flagged in the warning boxes above.</p>
+  <p>Generated on 2026-08-09, last updated 2026-08-10 (observability and automated error triage). Diagrams rendered with <a href="https://mermaid.js.org/" target="_blank" rel="noopener">Mermaid.js</a> (local copy at <code>vendor/mermaid.min.js</code>, with CDN fallback).</p>
 </footer>
 
 <script>
