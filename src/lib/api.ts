@@ -115,6 +115,18 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   deleteNote: (id: number) => request<void>(`/api/notes/${id}/`, { method: "DELETE" }),
+  reportClientError: (payload: {
+    message: string;
+    stack?: string;
+    url?: string;
+    user_agent?: string;
+    request_id?: string;
+    source?: string;
+  }) =>
+    request<{ detail: string; fingerprint: string }>("/api/observability/client-error/", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 };
 
 /** Test helper — clears the in-memory CSRF token between cases. */

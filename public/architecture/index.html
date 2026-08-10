@@ -559,7 +559,7 @@ flowchart TB
 
   <section class="card anchor-offset" id="observability">
     <h2>5. Observability — from a production error to a debugged report</h2>
-    <p class="lede">Structured JSON logs, a CloudWatch metric filter, alarms, and a Lambda that reads the application's own source code, asks an LLM to debug it, and emails a report with a proposed patch. Everything is Terraform in <code>backend/terraform/modules/observability/</code>; the Lambda source is <code>backend/observability/</code>. Reference document: <code>docs/architecture/observability.md</code>.</p>
+    <p class="lede">Structured JSON logs from the API <em>and</em> browser errors posted to <code>/api/observability/client-error/</code>, a CloudWatch metric filter, alarms, and a Lambda that asks MiniMax to debug the failure and files a Jira issue in project <strong>KAN</strong> (staging). Everything is Terraform in <code>backend/terraform/modules/observability/</code>; the Lambda source is <code>backend/observability/</code>. Reference document: <code>docs/architecture/observability.md</code>.</p>
 
     <div class="callout warn">
       <div class="callout-title">⚠️ What this replaced</div>
@@ -611,6 +611,7 @@ flowchart TB
       <tr><td><code>config/exception_handler.py</code></td><td>ERROR for 5xx, <strong>WARNING for 4xx</strong></td><td>Every DRF exception — <code>turbo_exception_handler</code> is wired as <code>REST_FRAMEWORK["EXCEPTION_HANDLER"]</code>, logs with <code>exc_info</code> and a fingerprint, then defers to DRF for the actual response shape</td></tr>
       <tr><td><code>config/middleware.py</code></td><td>INFO / ERROR</td><td>One INFO line per request (<code>route</code>, <code>status</code>, <code>duration_ms</code>, <code>request_id</code>) plus an ERROR line for any response with status ≥ 500</td></tr>
       <tr><td><code>apps/accounts/views.py</code></td><td>WARNING</td><td>Token blacklist and refresh rejections that used to be swallowed by a bare <code>except: pass</code></td></tr>
+      <tr><td><code>apps/observability/views.py</code> + SPA <code>ClientErrorReporter</code></td><td>ERROR</td><td>Browser <code>window.onerror</code> / <code>unhandledrejection</code> POSTs to <code>/api/observability/client-error/</code>; the API emits a structured ERROR so the same CW → Lambda → MiniMax → Jira <strong>KAN</strong> pipeline picks it up</td></tr>
     </table>
     <p>4xx stays at WARNING deliberately: logging client mistakes at ERROR would make the alarm — and the whole triage automation behind it — fire on ordinary bad requests.</p>
 
@@ -733,7 +734,7 @@ flowchart TB
 
     <div class="callout">
       <div class="callout-title">ℹ️ Optional Jira integration</div>
-      <p>The Lambda can optionally file a Jira Cloud issue for the first sighting of a fingerprint, with the email always carrying the ticket link. Same out-of-band secret pattern as the LLM: Terraform creates a placeholder <code>turboai-notes-{env}-jira-credentials</code> with <code>ignore_changes</code> on <code>secret_string</code>, the operator populates it once with <code>aws secretsmanager put-secret-value</code> and the token never enters the state file or the Lambda's environment. When <code>jira_enabled = true</code>, the Lambda <code>POST /rest/api/3/issue</code> (Atlassian Document Format, not markdown) the first time a fingerprint appears, records the returned key against the dedup record via <code>dedup.attach_issue</code>, and subsequent sightings of the same fingerprint skip the create call and the email starts with the existing key. Failures collapse to a missing link in the email — they never block notification. Disabled by default; flip <code>jira_enabled</code> on the observability module and set <code>jira_project_key</code> to start filing tickets. Details in <code>docs/architecture/observability.md</code> § Jira.</p>
+      <p>The Lambda can optionally file a Jira Cloud issue for the first sighting of a fingerprint, with the email always carrying the ticket link. Same out-of-band secret pattern as the LLM: Terraform creates a placeholder <code>turboai-notes-{env}-jira-credentials</code> with <code>ignore_changes</code> on <code>secret_string</code>, the operator populates it once with <code>aws secretsmanager put-secret-value</code> and the token never enters the state file or the Lambda's environment. Staging uses project <strong>KAN</strong> (<code>jira_enabled = true</code>, <code>jira_project_key = KAN</code>). The Lambda <code>POST /rest/api/3/issue</code> (Atlassian Document Format, not markdown) the first time a fingerprint appears, records the returned key against the dedup record via <code>dedup.attach_issue</code>, and subsequent sightings of the same fingerprint skip the create call and the email starts with the existing key. Failures collapse to a missing link in the email — they never block notification. Details in <code>docs/architecture/observability.md</code> § Jira.</p>
     </div>
   </section>
 
