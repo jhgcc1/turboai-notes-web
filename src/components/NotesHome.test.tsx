@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { NotesHome } from "./NotesHome";
 import { api } from "@/lib/api";
 
+const reportUnexpected = vi.hoisted(() => vi.fn());
+
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
   return {
@@ -15,6 +17,10 @@ vi.mock("@/lib/api", async () => {
     },
   };
 });
+
+vi.mock("@/lib/reportUnexpected", () => ({
+  reportUnexpected: (...args: unknown[]) => reportUnexpected(...args),
+}));
 
 const categories = [
   { id: 1, name: "Random Thoughts", color: "#E9A680", note_count: 1, created_at: "" },
@@ -176,8 +182,24 @@ describe("NotesHome", () => {
 
   it("redirects to /login when the initial fetch fails", async () => {
     const hrefSetter = stubLocation();
+    reportUnexpected.mockClear();
     vi.mocked(api.me).mockRejectedValue(new Error("unauthenticated"));
     render(<NotesHome />);
     await waitFor(() => expect(hrefSetter).toHaveBeenCalledWith("/login"));
+    expect(reportUnexpected).toHaveBeenCalledWith(expect.any(Error), "NotesHome.load");
+  });
+
+  it("reports createNote failures without navigating", async () => {
+    const user = userEvent.setup();
+    const hrefSetter = stubLocation();
+    reportUnexpected.mockClear();
+    vi.mocked(api.createNote).mockRejectedValue(new Error("create failed"));
+    render(<NotesHome />);
+    await screen.findByRole("button", { name: /Random Thoughts/ });
+    await user.click(screen.getByText("+ New Note"));
+    await waitFor(() =>
+      expect(reportUnexpected).toHaveBeenCalledWith(expect.any(Error), "NotesHome.createNote"),
+    );
+    expect(hrefSetter).not.toHaveBeenCalled();
   });
 });

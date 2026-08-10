@@ -3,10 +3,15 @@ import userEvent from "@testing-library/user-event";
 import { AuthForm } from "./AuthForm";
 import { api } from "@/lib/api";
 
-const { MockApiError } = vi.hoisted(() => ({
+const { MockApiError, reportUnexpected } = vi.hoisted(() => ({
   MockApiError: class MockApiError extends Error {
     status = 400;
+    constructor(message?: string, status = 400) {
+      super(message);
+      this.status = status;
+    }
   },
+  reportUnexpected: vi.fn(),
 }));
 
 vi.mock("@/lib/api", () => ({
@@ -16,6 +21,10 @@ vi.mock("@/lib/api", () => ({
     register: vi.fn(),
     login: vi.fn(),
   },
+}));
+
+vi.mock("@/lib/reportUnexpected", () => ({
+  reportUnexpected: (...args: unknown[]) => reportUnexpected(...args),
 }));
 
 function stubLocation() {
@@ -68,7 +77,8 @@ describe("AuthForm", () => {
 
   it("shows a friendly error on an ApiError", async () => {
     const user = userEvent.setup();
-    vi.mocked(api.login).mockRejectedValue(new MockApiError("bad request"));
+    reportUnexpected.mockClear();
+    vi.mocked(api.login).mockRejectedValue(new MockApiError("bad request", 400));
     render(<AuthForm mode="login" />);
     await user.type(screen.getByPlaceholderText("Email address"), "a@b.com");
     await user.type(screen.getByPlaceholderText("Password"), "wrongpass");
@@ -76,16 +86,19 @@ describe("AuthForm", () => {
     expect(
       await screen.findByText("Something went wrong. Check your email and password."),
     ).toBeInTheDocument();
+    expect(reportUnexpected).toHaveBeenCalled();
   });
 
   it("shows a network error on unexpected failures", async () => {
     const user = userEvent.setup();
+    reportUnexpected.mockClear();
     vi.mocked(api.login).mockRejectedValue(new Error("boom"));
     render(<AuthForm mode="login" />);
     await user.type(screen.getByPlaceholderText("Email address"), "a@b.com");
     await user.type(screen.getByPlaceholderText("Password"), "secret123");
     await user.click(screen.getByRole("button", { name: "Login" }));
     expect(await screen.findByText("Network error.")).toBeInTheDocument();
+    expect(reportUnexpected).toHaveBeenCalledWith(expect.any(Error), "AuthForm.submit");
   });
 
   it("toggles password and shows signup copy", async () => {

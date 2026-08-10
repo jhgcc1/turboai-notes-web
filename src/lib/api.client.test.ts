@@ -65,6 +65,16 @@ describe("api client", () => {
     await expect(api.me()).rejects.toBeInstanceOf(ApiError);
   });
 
+  it("wraps network failures as Error", async () => {
+    vi.mocked(fetch).mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    await expect(api.me()).rejects.toThrow("Failed to fetch");
+  });
+
+  it("wraps non-Error fetch rejections", async () => {
+    vi.mocked(fetch).mockRejectedValueOnce("offline");
+    await expect(api.me()).rejects.toThrow("Network request failed");
+  });
+
   it("csrf register logout create update", async () => {
     await api.csrf();
     await api.register("a@b.com", "pass");
@@ -74,6 +84,7 @@ describe("api client", () => {
     await api.getNote(1);
     await api.createNote({ title: "t", body: "b", category: 1 });
     await api.updateNote(1, { title: "x" });
+    await api.reportClientError({ message: "client boom", source: "window.onerror" });
   });
 });
 

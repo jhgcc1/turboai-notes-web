@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Libre_Baskerville, Source_Sans_3 } from "next/font/google";
+
+import { ClientErrorReporter } from "@/components/ClientErrorReporter";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import "./globals.css";
 
 const display = Libre_Baskerville({
@@ -21,7 +24,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${display.variable} ${body.variable} antialiased`}>{children}</body>
+      <body className={`${display.variable} ${body.variable} antialiased`}>
+        <ClientErrorReporter />
+        <ErrorBoundary>{children}</ErrorBoundary>
+      </body>
     </html>
   );
 }
