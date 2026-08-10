@@ -489,7 +489,7 @@ flowchart TB
     subgraph PUB["Public subnets (2 AZs)"]
       ALB["ALB<br/>turboai-notes-staging-alb"]
       ECS["ECS Fargate task<br/>assign_public_ip=true<br/>SG turboai-notes-staging-ecs"]
-      BAST["EC2 Bastion — t4g.micro<br/>SG turboai-notes-staging-bastion<br/>SSH :22 (0.0.0.0/0)"]
+      BAST["EC2 Bastion — t4g.micro<br/>SG turboai-notes-staging-bastion<br/>SSH :22 (bastion_ssh_cidr /32)"]
     end
     subgraph PRIV["Private subnets (2 AZs)"]
       RDS[("RDS Postgres 16<br/>db.t4g.micro<br/>SG turboai-notes-staging-db")]
@@ -517,7 +517,7 @@ flowchart TB
     <table>
       <tr><th>Category</th><th>Resources (Terraform)</th><th>Detail</th></tr>
       <tr><td><strong>Networking</strong></td><td><code>aws_vpc</code>, <code>aws_internet_gateway</code>, 2 public subnets + 2 private, <code>aws_route_table</code> (public → IGW)</td><td>No NAT Gateway — there is no <code>aws_nat_gateway</code> resource; ECS tasks run in a public subnet with their own public IP</td></tr>
-      <tr><td><strong>Network security</strong></td><td>4 Security Groups: <code>alb</code> (80 from 0.0.0.0/0), <code>ecs_tasks</code> (8000 only from the ALB), <code>db</code> (5432 from ECS+bastion), <code>bastion</code> (22 from 0.0.0.0/0)</td><td>Bastion SSH open to the world — flagged in the Terraform code itself as something to restrict in a real production setup</td></tr>
+      <tr><td><strong>Network security</strong></td><td>4 Security Groups: <code>alb</code> (80 from 0.0.0.0/0), <code>ecs_tasks</code> (8000 only from the ALB), <code>db</code> (5432 from ECS+bastion), <code>bastion</code> (22 from <code>var.bastion_ssh_cidr</code> only)</td><td>Bastion SSH is operator-IP-restricted (<code>/32</code> in env <code>terraform.tfvars</code>); update the CIDR when the public IP changes — never reopen <code>0.0.0.0/0</code></td></tr>
       <tr><td><strong>Compute (API)</strong></td><td><code>aws_ecr_repository</code>, <code>aws_ecs_cluster</code>, <code>aws_ecs_task_definition</code> (Fargate, 256 CPU / 512 MB), <code>aws_ecs_service</code> (desired_count=1)</td><td><strong>ECS Fargate, not App Runner</strong> — comment in the code: "App Runner is closed to new customers (2026-04-30)". Mentions of App Runner in <code>docs/costs/estimated-cost.md</code> are outdated.</td></tr>
       <tr><td><strong>Load balancing</strong></td><td><code>aws_lb</code> (ALB, internet-facing, only an HTTP :80 <code>listener</code>), <code>aws_lb_target_group</code> (health check <code>/api/health/</code>)</td><td>No HTTPS on the ALB — TLS terminates at CloudFront; CloudFront→ALB is plain HTTP (<code>origin_protocol_policy = "http-only"</code>)</td></tr>
       <tr><td><strong>CDN (API)</strong></td><td><code>aws_cloudfront_distribution.api</code></td><td>Default CloudFront certificate (no custom domain); caching disabled (<code>Managed-CachingDisabled</code>)</td></tr>
@@ -667,52 +667,79 @@ sequenceDiagram
   </section>
 
   <section class="card anchor-offset" id="mcp-skills">
-    <h2>7. MCP and Skills — when to use each</h2>
-    <p class="lede">Two automation mechanisms live in this repository: an <strong>MCP</strong> server to operate AWS (<code>backend/mcp/server.py</code>) and two <strong>Cursor skills</strong> (<code>.cursor/skills/</code>) for review and e2e workflows.</p>
+    <h2>7. MCP and Skills — how they work</h2>
+    <p class="lede">Two automation layers sit beside the app code: the <strong>AWS MCP</strong> (<code>backend/mcp/</code>) lets a Cursor agent operate staging/prod AWS safely, and two <strong>Cursor skills</strong> (<code>.cursor/skills/</code>) encode repeatable review and e2e loops. Neither replaces Django/Next.js business logic or GitHub Actions CI — they amplify operator workflows.</p>
 
-    <h3>MCP <code>turbo-notes-aws</code> (<code>backend/mcp/server.py</code>)</h3>
-    <p>A FastMCP server that exposes AWS tools for account <code>615737882760</code>, with an SSH tunnel via the EC2 bastion to reach the RDS instance (which is private). <strong>17 tools</strong> in total:</p>
+    <h3>AWS MCP (<code>backend/mcp/</code>) — what it is</h3>
+    <p>A local <strong>FastMCP</strong> server (<code>server.py</code>) registered in Cursor as <code>turbo-notes-aws</code>. The agent calls named tools over MCP; the Python process uses an AWS SSO profile (or CLI credentials) plus an SSH tunnel through the EC2 bastion to reach private RDS. It is <strong>not</strong> deployed to AWS — it runs on the operator machine (here: WSL).</p>
+    <ul>
+      <li><strong>Account / region:</strong> <code>615737882760</code>, infra in <code>us-east-2</code>.</li>
+      <li><strong>Config:</strong> <code>mcp/.env</code> (from <code>.env.example</code>) holds bastion host, RDS endpoints, local tunnel ports, SSO start URL. Secrets stay out of the repo; the bastion <em>private</em> key stays on disk (<code>~/turbo-notes-bastion.pem</code>).</li>
+      <li><strong>When to use it:</strong> inspect CloudWatch logs, run SQL against staging/prod, seed staging via the recommended API path, or confirm infra after a Deploy — whenever the agent needs live AWS state that unit tests cannot see.</li>
+    </ul>
+
+    <h4>Tunnel flow (Cursor → bastion → RDS)</h4>
+    <p>RDS is in a private subnet (<code>publicly_accessible=false</code>). The MCP opens a local SSH local-forward: laptop port → bastion → RDS <code>:5432</code>. Staging typically maps to local <strong>5435</strong>, prod to <strong>5436</strong>. Bastion security-group ingress on <strong>:22</strong> is restricted to <code>var.bastion_ssh_cidr</code> (operator public IP <code>/32</code> in env <code>terraform.tfvars</code>) — not the open internet. Update that CIDR when the egress IP changes; SSM Session Manager remains a non-SSH fallback.</p>
+    <div class="diagram-box">
+      <pre class="mermaid">
+flowchart LR
+  Cursor["Cursor agent"] --> MCP["AWS MCP<br/>backend/mcp/server.py"]
+  MCP -->|"aws_sso_*"| AWSAPI["AWS APIs<br/>Logs / SSO"]
+  MCP -->|"tunnel_start<br/>SSH :22 from allowlisted IP"| Bastion["EC2 bastion<br/>public subnet"]
+  Bastion -->|"TCP :5432"| RDS["RDS Postgres<br/>private subnet"]
+  MCP -->|"db_query / db_execute<br/>via local forward"| Bastion
+
+  classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
+  class MCP,Bastion,RDS,AWSAPI live;
+      </pre>
+      <div class="caption">Fig. 7 — MCP data path: SSO/logs hit AWS APIs directly; database tools require an SSH tunnel through the IP-restricted bastion.</div>
+    </div>
+
+    <h4>Tool groups</h4>
     <table class="tight">
-      <tr><th>Category</th><th>Tools</th><th>Description</th></tr>
-      <tr><td>SSO / session</td><td><code>aws_sso_status</code>, <code>aws_sso_login</code></td><td>Checks/generates the SSO session (<code>AdministratorAccess-615737882760</code> profile)</td></tr>
-      <tr><td>Guidance</td><td><code>choose_env_help</code>, <code>env_info</code></td><td>Reminder to ask staging vs prod; shows config without exposing secrets</td></tr>
-      <tr><td>Tunnel</td><td><code>tunnel_status</code>, <code>tunnel_start</code>, <code>tunnel_stop</code></td><td>Opens/closes the local SSH tunnel → RDS via the bastion (local port 5435=staging / 5436=prod)</td></tr>
-      <tr><td>Database (read)</td><td><code>db_ping</code>, <code>db_query</code>, <code>db_list_schemas</code>, <code>db_list_tables</code>, <code>db_describe_table</code></td><td>Read-only SQL (keyword allowlist <code>select/with/show/explain/values/table</code>) — allowed in staging <strong>and</strong> prod</td></tr>
-      <tr><td>Database (write)</td><td><code>db_execute</code></td><td><strong>Refused in prod</strong> unconditionally; requires <code>confirm=true</code> in staging</td></tr>
-      <tr><td>Seed</td><td><code>seed_staging</code></td><td>Staging only; in practice recommends using <code>POST /api/seed/</code> instead of raw SQL, so as not to skip application logic</td></tr>
-      <tr><td>Logs</td><td><code>logs_list_groups</code>, <code>logs_tail</code>, <code>logs_insights</code></td><td>CloudWatch Logs — groups with the <code>/turboai/notes</code> prefix</td></tr>
+      <tr><th>Category</th><th>Tools</th><th>How they behave</th></tr>
+      <tr><td>SSO / session</td><td><code>aws_sso_status</code>, <code>aws_sso_login</code></td><td>Ensure profile <code>AdministratorAccess-615737882760</code> is valid; login writes/refreshes <code>~/.aws</code> as needed</td></tr>
+      <tr><td>Guidance</td><td><code>choose_env_help</code>, <code>env_info</code></td><td>Force staging-vs-prod clarity; print non-secret config for debugging</td></tr>
+      <tr><td>Tunnel</td><td><code>tunnel_status</code>, <code>tunnel_start</code>, <code>tunnel_stop</code></td><td>Manage the SSH local-forward; DB tools fail until the tunnel for that env is up</td></tr>
+      <tr><td>Database (read)</td><td><code>db_ping</code>, <code>db_query</code>, <code>db_list_schemas</code>, <code>db_list_tables</code>, <code>db_describe_table</code></td><td>Read-only SQL allowlist (<code>select/with/show/explain/values/table</code>) — staging <strong>and</strong> prod</td></tr>
+      <tr><td>Database (write)</td><td><code>db_execute</code></td><td>Staging only with <code>confirm=true</code>; <strong>hard-refused</strong> for prod before connect</td></tr>
+      <tr><td>Seed</td><td><code>seed_staging</code></td><td>Staging only; prefers <code>POST /api/seed/</code> so app validations still run</td></tr>
+      <tr><td>Logs</td><td><code>logs_list_groups</code>, <code>logs_tail</code>, <code>logs_insights</code></td><td>CloudWatch under the <code>/turboai/notes</code> prefix — no tunnel required</td></tr>
     </table>
 
     <div class="callout warn">
-      <div class="callout-title">⚠️ Warning — prod guardrails (real, in the code)</div>
-      <p>In <code>mcp/tools/db_env.py</code>: the connection to prod is opened with <code>default_transaction_read_only=on</code> on Postgres (the database itself refuses any write, not just the Python code). <code>db_execute</code> returns an immediate error if the environment is <code>prod</code>, before even connecting. The MCP server's instructions (<code>FastMCP(..., instructions=...)</code>) explicitly state: <em>"ALWAYS ask whether the user wants staging or prod before DB operations… Prod DB is READ-ONLY."</em></p>
+      <div class="callout-title">⚠️ Staging vs prod guardrails (enforced in code)</div>
+      <p>In <code>mcp/tools/db_env.py</code>, prod connections set <code>default_transaction_read_only=on</code> so Postgres itself rejects writes. <code>db_execute</code> errors immediately when <code>env="prod"</code>. Server instructions require asking <em>staging or prod?</em> before DB work. Seed and mutating SQL are staging-only; prod MCP use is for inspection (logs + read queries).</p>
     </div>
 
     <h3>Cursor Skills (<code>.cursor/skills/</code>)</h3>
+    <p>Skills are markdown playbooks the agent loads on demand. They do <strong>not</strong> replace GitHub Actions; they drive the human-in-the-loop loop around CI and staging verification.</p>
     <table class="tight">
-      <tr><th>Skill</th><th>What it does</th><th>When to use it</th></tr>
-      <tr><td><code>pr-review-loop</code></td><td>Two modes: (1) iterates over open PRs in both repos, runs lint/test, applies fixes from review comments, commits, and waits for CI to go green; (2) general quality/security review of uncommitted code or the whole codebase, followed by the same commit→CI→review cycle</td><td>"Review the open PRs", "get this ready to merge", or as a quality-audit step over the whole codebase</td></tr>
-      <tr><td><code>e2e-notes</code></td><td>Reads <code>docs/e2e.md</code>, runs cases E1–E10 via Playwright/Chrome MCP (UI) + <code>curl</code> (API) + <code>psql</code>/MCP <code>db_query</code> (database), writes <code>docs/e2e-report.md</code>, fixes and repeats until everything passes</td><td>After touching auth/CSRF/UI, or before considering a feature "done"</td></tr>
+      <tr><th>Skill</th><th>How it works</th><th>Relation to CI</th><th>When to invoke</th></tr>
+      <tr><td><code>pr-review-loop</code></td><td><strong>Open-PR mode:</strong> list open PRs on <code>turboai-notes-api</code> / <code>turboai-notes-web</code>, checkout, run local quality gates, apply clear review-comment fixes, commit, push, wait for checks. <strong>General mode:</strong> same review→fix→pipeline loop over uncommitted work or the whole tree without requiring an open PR.</td><td>Runs the same quality bar CI cares about (backend ruff/pytest; frontend format/lint/typecheck/test), then watches <code>gh pr checks</code> / Deploy until green. Does not merge unless asked.</td><td>"Review the open PRs", "get this ready to merge", or a quality/security pass before merging</td></tr>
+      <tr><td><code>e2e-notes</code></td><td>Reads <code>docs/e2e.md</code>, asks all vs selected cases (E1–E10), drives UI via Playwright/Chrome MCP, API via <code>curl</code> + cookie jar, DB via local <code>psql</code> or MCP <code>db_query</code>, writes <code>docs/e2e-report.md</code>, fixes failures and re-runs until pass.</td><td>Complements unit-test CI: exercises cross-origin auth/CSRF and real browser flows that pytest/Jest do not cover. Often run against local compose or staging CloudFront URLs after Deploy.</td><td>After auth/CSRF/UI changes, or before calling a feature "done"</td></tr>
     </table>
 
-    <h3>Practical decision table</h3>
+    <h3>Decision guide — "I want X → use Y"</h3>
     <table>
       <tr><th>I want to...</th><th>Use this</th></tr>
       <tr><td>See recent API error logs on staging</td><td>MCP <code>logs_tail</code> or <code>logs_insights</code> (<code>env="staging"</code>)</td></tr>
-      <tr><td>Run a read-only query against the staging <em>or</em> prod database</td><td>MCP <code>db_query</code> (<code>env="staging"</code> or <code>"prod"</code>) — always ask which environment first</td></tr>
-      <tr><td>Insert/update data in the database</td><td>MCP <code>db_execute(env="staging", confirm=true)</code> — <strong>never</strong> on prod (blocked by the server itself)</td></tr>
-      <tr><td>Populate demo data</td><td><code>POST /api/seed/</code> directly on the staging API (the MCP's own <code>seed_staging</code> recommends this over raw SQL)</td></tr>
-      <tr><td>Check/renew the AWS session</td><td>MCP <code>aws_sso_status</code> → if invalid, <code>aws_sso_login</code></td></tr>
-      <tr><td>Open/close the SSH tunnel to RDS via the bastion</td><td>MCP <code>tunnel_start</code> / <code>tunnel_status</code> / <code>tunnel_stop</code></td></tr>
-      <tr><td>View the MCP configuration without leaking secrets</td><td>MCP <code>env_info</code></td></tr>
-      <tr><td>Review open PRs and get them ready to merge</td><td>Skill <code>pr-review-loop</code> (Open-PR mode)</td></tr>
-      <tr><td>Do a quality/security review of uncommitted code or the whole codebase</td><td>Skill <code>pr-review-loop</code> (general mode)</td></tr>
+      <tr><td>Run a read-only query against staging <em>or</em> prod DB</td><td>MCP <code>tunnel_start</code> then <code>db_query</code> — always ask which env first</td></tr>
+      <tr><td>Insert/update rows in the database</td><td>MCP <code>db_execute(env="staging", confirm=true)</code> — never prod</td></tr>
+      <tr><td>Populate demo data the app way</td><td><code>POST /api/seed/</code> on staging (MCP <code>seed_staging</code> points here)</td></tr>
+      <tr><td>Check or renew the AWS session</td><td>MCP <code>aws_sso_status</code> → <code>aws_sso_login</code> if needed</td></tr>
+      <tr><td>Open/close the SSH tunnel to RDS</td><td>MCP <code>tunnel_start</code> / <code>tunnel_status</code> / <code>tunnel_stop</code></td></tr>
+      <tr><td>Update who can SSH to the bastion</td><td>Change <code>bastion_ssh_cidr</code> in env <code>terraform.tfvars</code> + apply (see <code>backend/mcp/README.md</code>)</td></tr>
+      <tr><td>View MCP config without leaking secrets</td><td>MCP <code>env_info</code></td></tr>
+      <tr><td>Review open PRs and get CI green</td><td>Skill <code>pr-review-loop</code> (Open-PR mode)</td></tr>
+      <tr><td>Quality/security review of local or whole-tree changes</td><td>Skill <code>pr-review-loop</code> (general mode)</td></tr>
       <tr><td>Validate login, notes CRUD, and per-user isolation end-to-end</td><td>Skill <code>e2e-notes</code></td></tr>
+      <tr><td>Ship infra/app changes to staging</td><td>Push/merge to <code>develop</code> → GitHub Actions <strong>Deploy</strong> (not the MCP)</td></tr>
     </table>
 
     <div class="callout">
       <div class="callout-title">ℹ️ When <strong>not</strong> to use the MCP</div>
-      <p>The MCP should <strong>not</strong> be used for business logic (that always lives in Django), nor to write to prod (impossible by design), nor as a shortcut to bypass the API when populating data — <code>seed_demo</code> intentionally points back to <code>POST /api/seed/</code>, precisely so it doesn't bypass application validations.</p>
+      <p>Do not put business logic in MCP tools (that stays in Django). Do not use MCP to write prod (blocked). Do not bypass <code>POST /api/seed/</code> with raw SQL when seeding demo data. Do not reopen bastion SSH to <code>0.0.0.0/0</code> if the tunnel fails — update the allowlisted <code>/32</code> instead.</p>
     </div>
   </section>
 
@@ -741,7 +768,7 @@ flowchart TD
   class A,B,C,D,E,F,G,H,I,J,K live;
   class L,M pending;
       </pre>
-      <div class="caption">Fig. 7 — Full lifecycle of a feature, from code to (potential) prod deploy.</div>
+      <div class="caption">Fig. 8 — Full lifecycle of a feature, from code to (potential) prod deploy.</div>
     </div>
 
     <h3>Where each piece fits, in detail</h3>
@@ -814,7 +841,7 @@ flowchart LR
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
   class DB,API_L,WEB_L,IMG,ECRX,ECSX,RDSX,NEXT,S3X,CFX live;
       </pre>
-      <div class="caption">Fig. 8 — <code>docker-compose.yml</code> and the frontend <code>Dockerfile</code> only exist on the left side (the developer's laptop). On AWS, only the <code>backend/Dockerfile</code> image survives — the frontend becomes static files on S3/CloudFront.</div>
+      <div class="caption">Fig. 9 — <code>docker-compose.yml</code> and the frontend <code>Dockerfile</code> only exist on the left side (the developer's laptop). On AWS, only the <code>backend/Dockerfile</code> image survives — the frontend becomes static files on S3/CloudFront.</div>
     </div>
 
     <h3>Local commands (identical to those in section 8)</h3>
