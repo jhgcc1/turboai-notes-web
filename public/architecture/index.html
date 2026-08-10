@@ -514,6 +514,109 @@
   @media (max-width: 560px) {
     .decide-grid { grid-template-columns: 1fr; }
   }
+
+  .sec-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .7rem;
+    margin: .8rem 0;
+    min-width: 0;
+  }
+  .sec-card {
+    background: #fff;
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: .8rem .85rem;
+    min-width: 0;
+  }
+  .sec-card h4 {
+    margin: 0 0 .35rem;
+    font-size: .95rem;
+  }
+  .sec-card ul {
+    margin: 0;
+    padding-left: 1.05rem;
+    font-size: .8rem;
+    line-height: 1.35;
+  }
+  .sec-card li { margin-bottom: .22rem; }
+  .sec-card .sec-tag {
+    display: inline-block;
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted);
+    margin-bottom: .25rem;
+  }
+  .sec-card.tokens { border-top: 4px solid var(--random); }
+  .sec-card.origin { border-top: 4px solid var(--personal); }
+  .sec-card.backend { border-top: 4px solid #a5623f; }
+  .sec-card.secrets { border-top: 4px solid var(--secret-sm); }
+  .sec-card.network { border-top: 4px solid var(--live); }
+  .sec-card.gates { border-top: 4px solid var(--pending); }
+
+  .threat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: .4rem .55rem;
+    margin: .85rem 0 .3rem;
+    min-width: 0;
+  }
+  .threat-grid .th {
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted);
+    padding: .2rem .45rem;
+  }
+  .threat-row {
+    display: contents;
+  }
+  .threat-cell {
+    border-radius: 8px;
+    padding: .55rem .65rem;
+    font-size: .8rem;
+    line-height: 1.35;
+    min-width: 0;
+  }
+  .threat-cell.threat {
+    background: #fdf0dd;
+    border: 1px solid #e9c9a8;
+    font-weight: 600;
+    color: #3e2723;
+  }
+  .threat-cell.control {
+    background: #fff;
+    border: 1px solid var(--card-border);
+  }
+  .threat-cell.control code { font-size: .76em; }
+  .gate-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .7rem;
+    margin: .8rem 0;
+    min-width: 0;
+  }
+  .gate-pair > * { min-width: 0; }
+  @media (max-width: 900px) {
+    .sec-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 700px) {
+    .sec-grid { grid-template-columns: 1fr; }
+    .gate-pair { grid-template-columns: 1fr; }
+    .threat-grid { grid-template-columns: 1fr; }
+    .threat-grid .th.control-h { display: none; }
+    .threat-cell.control::before {
+      content: "Control · ";
+      font-weight: 700;
+      color: var(--muted);
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+  }
 </style>
 </head>
 <body>
@@ -544,6 +647,7 @@
       <li><a href="#observability">Observability</a></li>
       <li><a href="#secrets">Secrets</a></li>
       <li><a href="#auth">Auth</a></li>
+      <li><a href="#security">Security</a></li>
       <li><a href="#tooling">MCP &amp; skills</a></li>
       <li><a href="#appendix">Appendix</a></li>
     </ol>
@@ -991,9 +1095,132 @@ flowchart LR
     </details>
   </section>
 
-  <!-- ========== 6. MCP & SKILLS ========== -->
+  <!-- ========== 6. SECURITY ========== -->
+  <section class="card anchor-offset" id="security">
+    <h2>6. Security</h2>
+    <p class="lede">Why this design is hard to abuse — tokens never in JS, authz only on the API, origins and secrets locked per environment.</p>
+
+    <div class="auth-flags" aria-label="Security highlights">
+      <span class="pill">httpOnly JWT</span>
+      <span class="pill">CSRF bootstrap</span>
+      <span class="pill">CORS per env</span>
+      <span class="pill">Authz in Django</span>
+      <span class="pill">SM for secrets</span>
+      <span class="pill">Bastion /32</span>
+    </div>
+
+    <div class="sec-grid">
+      <div class="sec-card tokens">
+        <div class="sec-tag">Tokens</div>
+        <h4>Static export is fine</h4>
+        <ul>
+          <li>Hosting choice: Next → S3 + CloudFront</li>
+          <li>JWTs are <strong>not</strong> in JS / <code>localStorage</code></li>
+          <li>httpOnly · Secure · <code>SameSite=None</code> on the <em>API</em> origin</li>
+        </ul>
+      </div>
+      <div class="sec-card origin">
+        <div class="sec-tag">Cross-origin</div>
+        <h4>CSRF + CORS locked</h4>
+        <ul>
+          <li>Unsafe methods need <code>X-CSRFToken</code> (bootstrap via <code>/api/auth/csrf/</code>)</li>
+          <li><code>CORS_ALLOWED_ORIGINS</code> / <code>CSRF_TRUSTED_ORIGINS</code> = that env’s web CF only</li>
+          <li>No wildcards / localhost in staging or prod</li>
+        </ul>
+      </div>
+      <div class="sec-card backend">
+        <div class="sec-tag">Backend</div>
+        <h4>Ownership stays in Django</h4>
+        <ul>
+          <li>Frontend has <strong>no</strong> authz / ownership rules</li>
+          <li>Django password validators + auth throttle <code>20/min</code></li>
+          <li><code>django-axes</code>: 5 failures / 1h cooloff</li>
+        </ul>
+      </div>
+      <div class="sec-card secrets">
+        <div class="sec-tag">Secrets</div>
+        <h4>Two paths, on purpose</h4>
+        <ul>
+          <li>Django/DB: GH → TF → SM → ECS</li>
+          <li>MiniMax / Jira: <strong>SM only</strong> → triage Lambda</li>
+          <li>No secret values on this page</li>
+        </ul>
+      </div>
+      <div class="sec-card network">
+        <div class="sec-tag">Network</div>
+        <h4>Bastion + private RDS</h4>
+        <ul>
+          <li>Bastion SSH allowlisted to operator <code>/32</code></li>
+          <li>RDS in private subnets (ECS + bastion only)</li>
+          <li>TLS at CloudFront; ALB is HTTP inside VPC</li>
+        </ul>
+      </div>
+      <div class="sec-card gates">
+        <div class="sec-tag">Delivery</div>
+        <h4>Branch &amp; env gates</h4>
+        <ul>
+          <li><code>main</code>: CI <code>quality</code> + 1 review</li>
+          <li>Env <code>prod</code>: required reviewers</li>
+          <li><code>jhgcc1</code> (admin) may bypass; staging unprotected for velocity</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Threat → control</h3>
+    <div class="threat-grid" role="table" aria-label="Threat to control mapping">
+      <div class="th">Threat</div>
+      <div class="th control-h">Control</div>
+      <div class="threat-row">
+        <div class="threat-cell threat">XSS steals session token</div>
+        <div class="threat-cell control">httpOnly cookies on API origin — never <code>localStorage</code> JWT</div>
+      </div>
+      <div class="threat-row">
+        <div class="threat-cell threat">Cross-site forged write</div>
+        <div class="threat-cell control">CSRF bootstrap + <code>X-CSRFToken</code> on POST/PATCH/DELETE</div>
+      </div>
+      <div class="threat-row">
+        <div class="threat-cell threat">Wrong site talks to API</div>
+        <div class="threat-cell control">CORS / CSRF trusted origins = env web CloudFront only</div>
+      </div>
+      <div class="threat-row">
+        <div class="threat-cell threat">“Hide my notes” in the SPA</div>
+        <div class="threat-cell control">Ownership filters only in Django/DRF</div>
+      </div>
+      <div class="threat-row">
+        <div class="threat-cell threat">LLM / Jira key in CI logs</div>
+        <div class="threat-cell control">MiniMax &amp; Jira never enter GitHub — SM → Lambda only</div>
+      </div>
+      <div class="threat-row">
+        <div class="threat-cell threat">Open SSH / exposed DB</div>
+        <div class="threat-cell control">Bastion <code>/32</code> · RDS private · tunnel via MCP when needed</div>
+      </div>
+    </div>
+
+    <div class="gate-pair">
+      <div class="path-card staging">
+        <h4>Staging</h4>
+        <p>Auto-deploy on <code>develop</code> — Environment unprotected for velocity.</p>
+        <ul>
+          <li>CORS / CSRF → staging web CF</li>
+          <li>Same cookie + CSRF model as prod</li>
+        </ul>
+      </div>
+      <div class="path-card prod">
+        <h4>Prod</h4>
+        <p>Published Release + Environment <code>prod</code> reviewers.</p>
+        <ul>
+          <li><code>main</code>: <code>quality</code> + 1 approval</li>
+          <li>Admin bypass: <code>jhgcc1</code> only</li>
+        </ul>
+      </div>
+    </div>
+
+    <p style="font-size:.84rem;color:var(--muted);margin:.2rem 0 0;">Refs: <code>docs/process/07-security-audit.md</code>, <code>10-csrf-cross-origin-fix.md</code>, <code>15-bastion-ssh-ip-restrict.md</code>, <code>18-branch-and-env-protection.md</code>.</p>
+  </section>
+
+  <!-- ========== 7. MCP & SKILLS ========== -->
   <section class="card anchor-offset" id="tooling">
-    <h2>6. MCP &amp; skills</h2>
+    <h2>7. MCP &amp; skills</h2>
     <p class="lede">Operator helpers on the laptop — not the live request path. Never deploy with MCP.</p>
 
     <div class="diagram-box">
@@ -1128,9 +1355,9 @@ flowchart LR
     </details>
   </section>
 
-  <!-- ========== 7. APPENDIX ========== -->
+  <!-- ========== 8. APPENDIX ========== -->
   <section class="card anchor-offset" id="appendix">
-    <h2>7. Appendix</h2>
+    <h2>8. Appendix</h2>
     <p class="lede">Detail kept off the main deck — open when presenting Q&amp;A.</p>
 
     <details class="fold">
