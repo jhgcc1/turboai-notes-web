@@ -517,7 +517,7 @@ flowchart TB
     <table>
       <tr><th>Category</th><th>Resources (Terraform)</th><th>Detail</th></tr>
       <tr><td><strong>Networking</strong></td><td><code>aws_vpc</code>, <code>aws_internet_gateway</code>, 2 public subnets + 2 private, <code>aws_route_table</code> (public → IGW)</td><td>No NAT Gateway — there is no <code>aws_nat_gateway</code> resource; ECS tasks run in a public subnet with their own public IP</td></tr>
-      <tr><td><strong>Network security</strong></td><td>4 Security Groups: <code>alb</code> (80 from 0.0.0.0/0), <code>ecs_tasks</code> (8000 only from the ALB), <code>db</code> (5432 from ECS+bastion), <code>bastion</code> (22 from <code>var.bastion_ssh_cidr</code> only)</td><td>Bastion SSH is operator-IP-restricted (<code>/32</code> in env <code>terraform.tfvars</code>); update the CIDR when the public IP changes — never reopen <code>0.0.0.0/0</code></td></tr>
+      <tr><td><strong>Network security</strong></td><td>4 Security Groups: <code>alb</code> (80 from 0.0.0.0/0), <code>ecs_tasks</code> (8000 only from the ALB), <code>db</code> (5432 from ECS+bastion), <code>bastion</code> (22 from <code>var.bastion_ssh_cidr</code> only)</td><td>Bastion SSH is operator-IP-restricted (<code>/32</code> default in env <code>main.tf</code>; optional local <code>terraform.tfvars</code>); update the CIDR when the public IP changes — never reopen <code>0.0.0.0/0</code></td></tr>
       <tr><td><strong>Compute (API)</strong></td><td><code>aws_ecr_repository</code>, <code>aws_ecs_cluster</code>, <code>aws_ecs_task_definition</code> (Fargate, 256 CPU / 512 MB), <code>aws_ecs_service</code> (desired_count=1)</td><td><strong>ECS Fargate, not App Runner</strong> — comment in the code: "App Runner is closed to new customers (2026-04-30)". Mentions of App Runner in <code>docs/costs/estimated-cost.md</code> are outdated.</td></tr>
       <tr><td><strong>Load balancing</strong></td><td><code>aws_lb</code> (ALB, internet-facing, only an HTTP :80 <code>listener</code>), <code>aws_lb_target_group</code> (health check <code>/api/health/</code>)</td><td>No HTTPS on the ALB — TLS terminates at CloudFront; CloudFront→ALB is plain HTTP (<code>origin_protocol_policy = "http-only"</code>)</td></tr>
       <tr><td><strong>CDN (API)</strong></td><td><code>aws_cloudfront_distribution.api</code></td><td>Default CloudFront certificate (no custom domain); caching disabled (<code>Managed-CachingDisabled</code>)</td></tr>
@@ -679,7 +679,7 @@ sequenceDiagram
     </ul>
 
     <h4>Tunnel flow (Cursor → bastion → RDS)</h4>
-    <p>RDS is in a private subnet (<code>publicly_accessible=false</code>). The MCP opens a local SSH local-forward: laptop port → bastion → RDS <code>:5432</code>. Staging typically maps to local <strong>5435</strong>, prod to <strong>5436</strong>. Bastion security-group ingress on <strong>:22</strong> is restricted to <code>var.bastion_ssh_cidr</code> (operator public IP <code>/32</code> in env <code>terraform.tfvars</code>) — not the open internet. Update that CIDR when the egress IP changes; SSM Session Manager remains a non-SSH fallback.</p>
+    <p>RDS is in a private subnet (<code>publicly_accessible=false</code>). The MCP opens a local SSH local-forward: laptop port → bastion → RDS <code>:5432</code>. Staging typically maps to local <strong>5435</strong>, prod to <strong>5436</strong>. Bastion security-group ingress on <strong>:22</strong> is restricted to <code>var.bastion_ssh_cidr</code> (operator public IP <code>/32</code> via env <code>main.tf</code> defaults; <code>*.tfvars</code> is gitignored) — not the open internet. Update that CIDR when the egress IP changes; SSM Session Manager remains a non-SSH fallback.</p>
     <div class="diagram-box">
       <pre class="mermaid">
 flowchart LR
@@ -729,7 +729,7 @@ flowchart LR
       <tr><td>Populate demo data the app way</td><td><code>POST /api/seed/</code> on staging (MCP <code>seed_staging</code> points here)</td></tr>
       <tr><td>Check or renew the AWS session</td><td>MCP <code>aws_sso_status</code> → <code>aws_sso_login</code> if needed</td></tr>
       <tr><td>Open/close the SSH tunnel to RDS</td><td>MCP <code>tunnel_start</code> / <code>tunnel_status</code> / <code>tunnel_stop</code></td></tr>
-      <tr><td>Update who can SSH to the bastion</td><td>Change <code>bastion_ssh_cidr</code> in env <code>terraform.tfvars</code> + apply (see <code>backend/mcp/README.md</code>)</td></tr>
+      <tr><td>Update who can SSH to the bastion</td><td>Change <code>bastion_ssh_cidr</code> defaults in env <code>main.tf</code> (and local <code>terraform.tfvars</code> if used) + apply (see <code>backend/mcp/README.md</code>)</td></tr>
       <tr><td>View MCP config without leaking secrets</td><td>MCP <code>env_info</code></td></tr>
       <tr><td>Review open PRs and get CI green</td><td>Skill <code>pr-review-loop</code> (Open-PR mode)</td></tr>
       <tr><td>Quality/security review of local or whole-tree changes</td><td>Skill <code>pr-review-loop</code> (general mode)</td></tr>
