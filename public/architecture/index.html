@@ -559,7 +559,7 @@ flowchart TB
 
   <section class="card anchor-offset" id="observability">
     <h2>5. Observability — from a production error to a debugged report</h2>
-    <p class="lede">Structured JSON logs from the API <em>and</em> browser errors posted to <code>/api/observability/client-error/</code>, a CloudWatch metric filter, alarms, and a Lambda that asks MiniMax to debug the failure and files a Jira issue in project <strong>KAN</strong> (staging). Everything is Terraform in <code>backend/terraform/modules/observability/</code>; the Lambda source is <code>backend/observability/</code>. Reference document: <code>docs/architecture/observability.md</code>.</p>
+    <p class="lede">Structured JSON logs from the API <em>and</em> browser errors posted to <code>/api/observability/client-error/</code>, a CloudWatch metric filter, alarms, and a Lambda that asks MiniMax to debug the failure and files a Jira issue in project <strong>KAN</strong> (staging) with a CloudWatch console deep link in the ticket. Everything is Terraform in <code>backend/terraform/modules/observability/</code>; the Lambda source is <code>backend/observability/</code>. Reference document: <code>backend/docs/architecture/observability.md</code>.</p>
 
     <div class="callout warn">
       <div class="callout-title">⚠️ What this replaced</div>
@@ -569,34 +569,39 @@ flowchart TB
     <div class="diagram-box">
       <pre class="mermaid">
 flowchart TB
-  APP["Django + gunicorn on ECS Fargate<br/>DRF exception handler logs JSON + fingerprint"]
+  FE["Browser SPA — static Next.js export<br/>ClientErrorReporter / ErrorBoundary / reportUnexpected"]
+  APP["Django + gunicorn on ECS Fargate<br/>DRF exception handler + process_exception → JSON ERROR"]
   DRV["awslogs log driver<br/>container stdout, one JSON object per line"]
   LG["CloudWatch Logs<br/>/turboai/notes/staging/api"]
   MF["Metric filter turboai-notes-staging-app-errors<br/>matches the JSON level field, not the message text"]
   MET["Custom metric turboai/notes/staging<br/>AppErrorCount"]
   ALARM["Alarm turboai-notes-staging-app-errors<br/>Sum of 5 or more in 5 min (prod: 3)"]
   TAL["SNS topic turboai-notes-staging-alarms"]
-  LAM["Lambda turboai-notes-staging-triage<br/>python3.12, stdlib + boto3, ~43 KB zip"]
+  LAM["Lambda turboai-notes-staging-triage<br/>python3.12, stdlib + boto3, ~43 KB zip<br/>MiniMax ONLY here"]
   INS["Logs Insights<br/>sample recent ERROR rows, group by fingerprint"]
   DDB[("DynamoDB turboai-notes-staging-error-fingerprints<br/>occurrence counter, 72h TTL")]
   SRC["Bundled source copy<br/>apps/ + config/ under repo/ inside the zip"]
   LLM["MiniMax-M2.1<br/>root cause + unified diff + repro steps"]
+  JIRA["Jira Cloud project KAN<br/>ADF issue + CloudWatch deep link"]
   TRP["SNS topic turboai-notes-staging-triage-reports"]
-  MAIL["Operator inbox<br/>confirmed email subscription"]
+  MAIL["Operator inbox<br/>email + Jira browse URL + CloudWatch URL"]
   INFRA["Infrastructure alarms<br/>no healthy hosts, RDS CPU/storage, triage failures"]
 
+  FE -->|"POST /api/observability/client-error/"| APP
   APP --> DRV --> LG --> MF --> MET --> ALARM --> TAL --> LAM
   LAM -->|"1. sample the errors behind the alarm"| INS
   LAM -->|"2. count occurrences, suppress repeats"| DDB
   LAM -->|"3. resolve traceback frames to real lines"| SRC
   LAM -->|"4. debug against the code shown"| LLM
-  LAM -->|"5. publish the report"| TRP --> MAIL
+  LAM -->|"5. create Jira issue when jira_enabled"| JIRA
+  LAM -->|"6. publish the report"| TRP --> MAIL
+  JIRA -.->|"browse link + CW link in body"| MAIL
   INFRA -->|"nothing in the app logs to debug"| TRP
 
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
-  class APP,DRV,LG,MF,MET,ALARM,TAL,LAM,INS,DDB,SRC,LLM,TRP,MAIL,INFRA live;
+  class FE,APP,DRV,LG,MF,MET,ALARM,TAL,LAM,INS,DDB,SRC,LLM,JIRA,TRP,MAIL,INFRA live;
       </pre>
-      <div class="caption">Fig. 6 — End-to-end path for <strong>staging</strong> (prod is the same module with lower thresholds). Nobody has to watch a dashboard: the first email about a new bug arrives with the failing source lines and a candidate patch already in it.</div>
+      <div class="caption">Fig. 6 — End-to-end path for <strong>staging</strong> (prod is the same module with lower thresholds). FE and BE both emit structured ERROR logs into the same CloudWatch group; the triage Lambda is the only place MiniMax runs. The first sighting of a fingerprint files a Jira <strong>KAN</strong> ticket (with a Logs Insights deep link) and emails a report with failing source lines and a candidate patch.</div>
     </div>
 
     <h3>Two SNS topics, on purpose</h3>
@@ -609,7 +614,7 @@ flowchart TB
     <table class="tight">
       <tr><th>Source</th><th>Level</th><th>What it logs</th></tr>
       <tr><td><code>config/exception_handler.py</code></td><td>ERROR for 5xx, <strong>WARNING for 4xx</strong></td><td>Every DRF exception — <code>turbo_exception_handler</code> is wired as <code>REST_FRAMEWORK["EXCEPTION_HANDLER"]</code>, logs with <code>exc_info</code> and a fingerprint, then defers to DRF for the actual response shape</td></tr>
-      <tr><td><code>config/middleware.py</code></td><td>INFO / ERROR</td><td>One INFO line per request (<code>route</code>, <code>status</code>, <code>duration_ms</code>, <code>request_id</code>) plus an ERROR line for any response with status ≥ 500</td></tr>
+      <tr><td><code>config/middleware.py</code></td><td>INFO / ERROR</td><td>One INFO line per request (<code>route</code>, <code>status</code>, <code>duration_ms</code>, <code>request_id</code>); <code>process_exception</code> logs uncaught non-DRF exceptions with full traceback + fingerprint; <code>process_response</code> logs status ≥ 500 only when not already logged</td></tr>
       <tr><td><code>apps/accounts/views.py</code></td><td>WARNING</td><td>Token blacklist and refresh rejections that used to be swallowed by a bare <code>except: pass</code></td></tr>
       <tr><td><code>apps/observability/views.py</code> + SPA <code>ClientErrorReporter</code> / <code>ErrorBoundary</code> / <code>reportUnexpected</code></td><td>ERROR</td><td>The web app is Next.js with <code>output: "export"</code> (static HTML/JS on S3+CloudFront) — <strong>no Node server</strong>, but React <code>"use client"</code> components still run in the browser. Capture is client-side: <code>window.onerror</code>, <code>unhandledrejection</code>, React <code>ErrorBoundary</code> (componentStack), and unexpected catch-path failures (API 5xx / programmer errors — not expected 401/validation). Each POSTs to <code>/api/observability/client-error/</code>; Django only logs structured ERROR (stack → JSON <code>exc_info</code>). <strong>MiniMax + Jira run only in the triage Lambda</strong>, never in the SPA or Django views.</td></tr>
     </table>
@@ -658,9 +663,10 @@ flowchart TB
       <tr><td><code>triage/logs.py</code></td><td>Logs Insights query (<code>filter level = "ERROR"</code>), polling, and grouping by fingerprint — most frequent group first, so triage targets the loudest bug.</td></tr>
       <tr><td><code>triage/dedup.py</code></td><td>DynamoDB counters and <code>attach_issue()</code>, which records a Jira ticket key against a fingerprint so recurrences of the same bug skip the create call and the email starts with the existing key.</td></tr>
       <tr><td><code>triage/repo.py</code></td><td>Traceback → source excerpts, as described above.</td></tr>
-      <tr><td><code>triage/llm.py</code></td><td>MiniMax chat completions (OpenAI-compatible <code>/chat/completions</code>) plus defensive JSON parsing into a structured <code>Analysis</code>.</td></tr>
-      <tr><td><code>triage/jira.py</code></td><td>Optional Jira Cloud integration: <code>POST /rest/api/3/issue</code> with HTTP Basic auth, Atlassian Document Format description, de-duplicated labels. Reads the API token from Secrets Manager; failures collapse to <code>None</code> and never block the email path.</td></tr>
-      <tr><td><code>triage/notify.py</code></td><td>Plain-text report rendering (now optionally prefixed with <code>[OPS-42]</code> when the fingerprint already has a Jira ticket); SNS delivery, or SES when <code>SES_FROM</code>/<code>SES_TO</code> are configured.</td></tr>
+      <tr><td><code>triage/llm.py</code></td><td>MiniMax chat completions (OpenAI-compatible <code>/chat/completions</code>) plus defensive JSON parsing into a structured <code>Analysis</code>. <strong>This is the only LLM call site</strong> — not Django, not the SPA.</td></tr>
+      <tr><td><code>triage/cloudwatch.py</code></td><td>Builds AWS console deep links (Logs Insights filtered by <code>fingerprint</code> / <code>request_id</code>, with log-stream / log-group fallbacks) for the Jira description and the email body.</td></tr>
+      <tr><td><code>triage/jira.py</code></td><td>Optional Jira Cloud integration: <code>POST /rest/api/3/issue</code> with HTTP Basic auth, Atlassian Document Format description (includes a <strong>CloudWatch</strong> “Open logs” link), de-duplicated labels. Staging uses project <strong>KAN</strong>. Reads the API token from Secrets Manager; failures collapse to <code>None</code> and never block the email path.</td></tr>
+      <tr><td><code>triage/notify.py</code></td><td>Plain-text report rendering (subject optionally prefixed with <code>[KAN-42]</code> when a ticket exists); body includes <code>Jira:</code> / <code>Existing ticket:</code> and a <code>CloudWatch:</code> console URL line; SNS delivery, or SES when <code>SES_FROM</code>/<code>SES_TO</code> are configured.</td></tr>
       <tr><td><code>triage/httpjson.py</code></td><td><code>urllib</code> JSON POST helper.</td></tr>
       <tr><td><code>tests/</code></td><td>Unit tests with no network and no AWS — <code>boto3</code> is imported lazily inside the functions that need it, and clients are injectable.</td></tr>
     </table>
@@ -719,11 +725,11 @@ flowchart TB
     <p>With no ERROR line in the lookback window the run reports <code>skipped: no ERROR log events in window</code>, which also confirms the wiring. Set <code>DRY_RUN=true</code> to rehearse the full pipeline, LLM call included, without sending mail.</p>
 
     <h4>When a report lands in the inbox</h4>
-    <p>The subject is <code>[{env}] NEW|RECURRING SEVERITY: one-line summary</code>. The body carries the environment, alarm, severity and model confidence, occurrence counts, the fingerprint, the failing endpoint and status, the root cause, suspected <code>file:line</code> locations, the proposed patch and fix steps, reproduction steps, the source files that were inspected, and the original log event with its traceback. A useful order of operations:</p>
+    <p>The subject is <code>[{env}] NEW|RECURRING SEVERITY: one-line summary</code> (prefixed with <code>[KAN-…]</code> when Jira filed or reused a ticket). The body carries the environment, alarm, severity and model confidence, occurrence counts, the fingerprint, <code>Jira:</code> / <code>Existing ticket:</code> browse URL when present, a <code>CloudWatch:</code> Logs Insights console URL, the failing endpoint and status, the root cause, suspected <code>file:line</code> locations, the proposed patch and fix steps, reproduction steps, the source files that were inspected, and the original log event with its traceback. A useful order of operations:</p>
     <ol>
       <li>Read the severity and the occurrence count — <code>RECURRING</code> with a high count is a live regression, a one-off <code>NEW</code> may be a probe or a bad client.</li>
       <li>Check the suspected locations against the quoted excerpts. <strong>The analysis is LLM-generated and the report says so — verify before acting on it.</strong> A <code>degraded</code> note at the top means the model call failed and only raw log data is included.</li>
-      <li>Pull the surrounding context with MCP <code>logs_insights</code> filtered on the fingerprint (see <a href="#mcp-skills">section 8</a>), or open the <code>{env}-observability</code> dashboard for the blast radius.</li>
+      <li>Open the <code>CloudWatch:</code> link in the email/Jira ticket (or pull surrounding context with MCP <code>logs_insights</code> filtered on the fingerprint — see <a href="#mcp-skills">section 8</a>), or open the <code>{env}-observability</code> dashboard for the blast radius.</li>
       <li>Fix it on a branch through the normal flow in <a href="#guia-feature">section 9</a>. The fingerprint stays stable across occurrences, so the same bug reappearing after 72 h will read as <code>NEW</code> again — a signal the fix did not hold.</li>
     </ol>
 
@@ -734,7 +740,7 @@ flowchart TB
 
     <div class="callout">
       <div class="callout-title">ℹ️ Optional Jira integration</div>
-      <p>The Lambda can optionally file a Jira Cloud issue for the first sighting of a fingerprint, with the email always carrying the ticket link. Same out-of-band secret pattern as the LLM: Terraform creates a placeholder <code>turboai-notes-{env}-jira-credentials</code> with <code>ignore_changes</code> on <code>secret_string</code>, the operator populates it once with <code>aws secretsmanager put-secret-value</code> and the token never enters the state file or the Lambda's environment. Staging uses project <strong>KAN</strong> (<code>jira_enabled = true</code>, <code>jira_project_key = KAN</code>). The Lambda <code>POST /rest/api/3/issue</code> (Atlassian Document Format, not markdown) the first time a fingerprint appears, records the returned key against the dedup record via <code>dedup.attach_issue</code>, and subsequent sightings of the same fingerprint skip the create call and the email starts with the existing key. Failures collapse to a missing link in the email — they never block notification. Details in <code>docs/architecture/observability.md</code> § Jira.</p>
+      <p>The Lambda can optionally file a Jira Cloud issue for the first sighting of a fingerprint, with the email always carrying the ticket link <em>and</em> a CloudWatch Logs Insights deep link (built by <code>triage/cloudwatch.py</code>, scoped by fingerprint/request_id when present). Same out-of-band secret pattern as the LLM: Terraform creates a placeholder <code>turboai-notes-{env}-jira-credentials</code> with <code>ignore_changes</code> on <code>secret_string</code>, the operator populates it once with <code>aws secretsmanager put-secret-value</code> and the token never enters the state file or the Lambda's environment. Staging uses project <strong>KAN</strong> (<code>jira_enabled = true</code>, <code>jira_project_key = KAN</code>). The Lambda <code>POST /rest/api/3/issue</code> (Atlassian Document Format, not markdown) the first time a fingerprint appears — ADF description includes a <strong>CloudWatch → Open logs</strong> link — records the returned key against the dedup record via <code>dedup.attach_issue</code>, and subsequent sightings of the same fingerprint skip the create call and the email starts with the existing key. Failures collapse to a missing link in the email — they never block notification. Reference: <code>backend/docs/architecture/observability.md</code> § Jira.</p>
     </div>
   </section>
 
