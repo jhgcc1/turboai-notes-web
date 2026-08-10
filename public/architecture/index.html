@@ -39,6 +39,7 @@
     font-family: var(--font-body);
     line-height: 1.6;
   }
+  html { overflow-x: clip; }
 
   h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; color: #3e2723; }
   h1 { font-size: 2.4rem; margin: 0 0 .3rem; }
@@ -101,10 +102,12 @@
   .layout {
     display: flex;
     max-width: 1180px;
+    width: 100%;
     margin: 0 auto;
     align-items: flex-start;
     gap: 2rem;
     padding: 2rem;
+    min-width: 0;
   }
 
   nav.toc {
@@ -125,7 +128,7 @@
   nav.toc a { color: var(--ink); text-decoration: none; }
   nav.toc a:hover { color: var(--random); text-decoration: underline; }
 
-  main { flex: 1 1 auto; min-width: 0; }
+  main { flex: 1 1 auto; min-width: 0; max-width: 100%; }
 
   section.card {
     background: var(--bg-card);
@@ -134,6 +137,8 @@
     padding: 1.8rem 2rem;
     margin-bottom: 2rem;
     box-shadow: 0 2px 10px rgba(93,64,55,.06);
+    min-width: 0;
+    max-width: 100%;
   }
 
   section.card > p.lede { color: var(--muted); font-size: 1.02rem; margin-top: -.2rem; }
@@ -145,6 +150,7 @@
     padding: 1rem;
     margin: 1.2rem 0;
     overflow-x: auto;
+    max-width: 100%;
   }
   .diagram-box .caption {
     font-size: .85rem;
@@ -153,8 +159,8 @@
     margin-top: .6rem;
     font-style: italic;
   }
-  .mermaid { display: flex; justify-content: center; }
-  .mermaid svg { max-width: 100%; }
+  .mermaid { display: flex; justify-content: center; max-width: 100%; }
+  .mermaid svg { max-width: 100%; height: auto; }
 
   .callout {
     border-radius: 10px;
@@ -178,11 +184,33 @@
   }
   .callout p:last-child { margin-bottom: 0; }
 
+  .table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 1.1rem 0;
+  }
+  .table-wrap > table { margin: 0; }
+
   table { width: 100%; border-collapse: collapse; margin: 1.1rem 0; font-size: .92rem; }
-  th, td { text-align: left; padding: .55rem .7rem; border-bottom: 1px solid var(--card-border); vertical-align: top; }
+  th, td {
+    text-align: left;
+    padding: .55rem .7rem;
+    border-bottom: 1px solid var(--card-border);
+    vertical-align: top;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
   th { background: #f3e9db; font-family: var(--font-display); font-weight: 700; color: #3e2723; }
   tr:hover td { background: #fdf7ec; }
   table.tight td, table.tight th { font-size: .85rem; padding: .4rem .55rem; }
+  td code, th code {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
 
   .badge {
     display: inline-block;
@@ -201,12 +229,15 @@
   .legend { display: flex; flex-wrap: wrap; gap: .8rem; margin: .8rem 0 1.3rem; font-size: .85rem; }
   .legend span.sw { display: inline-block; width: .8rem; height: .8rem; border-radius: 3px; margin-right: .35rem; vertical-align: -1px; }
 
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
-  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; min-width: 0; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; min-width: 0; }
+  .grid-2 > *, .grid-3 > * { min-width: 0; max-width: 100%; }
+  @media (max-width: 1100px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
   @media (max-width: 900px) {
     .layout { flex-direction: column; }
     nav.toc { position: static; width: 100%; flex: none; max-height: none; }
-    .grid-2, .grid-3 { grid-template-columns: 1fr; }
   }
 
   .shot-strip { display: flex; gap: .8rem; flex-wrap: wrap; margin: 1rem 0; }
@@ -226,11 +257,93 @@
   }
   footer a { color: var(--muted); }
 
-  .kv { display: grid; grid-template-columns: max-content 1fr; gap: .3rem 1rem; font-size: .9rem; margin: .8rem 0; }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: .3rem 1rem; font-size: .9rem; margin: .8rem 0; min-width: 0; }
   .kv dt { font-weight: 700; color: var(--muted); }
-  .kv dd { margin: 0; }
+  .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+  .kv dd code { white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
 
   .anchor-offset { scroll-margin-top: 1rem; }
+
+  .path-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1.2rem 0;
+    min-width: 0;
+  }
+  .path-compare > * { min-width: 0; max-width: 100%; }
+  .path-card {
+    border-radius: 12px;
+    padding: 1rem 1.15rem;
+    border: 2px solid var(--card-border);
+    background: #fff;
+  }
+  .path-card.staging {
+    border-color: var(--live);
+    background: var(--live-bg);
+  }
+  .path-card.prod {
+    border-color: var(--pending);
+    background: var(--pending-bg);
+  }
+  .path-card h4 {
+    margin: 0 0 .35rem;
+    font-size: 1.05rem;
+  }
+  .path-card.staging h4 { color: #1f3a52; }
+  .path-card.prod h4 { color: #2e5230; }
+  .path-card p { margin: 0 0 .55rem; font-size: .92rem; }
+  .path-card ul {
+    margin: 0;
+    padding-left: 1.15rem;
+    font-size: .88rem;
+  }
+  .path-card li { margin-bottom: .25rem; }
+
+  .pipeline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: .55rem;
+    margin: 1.2rem 0;
+  }
+  .pipe-step {
+    flex: 1 1 120px;
+    min-width: 110px;
+    max-width: 180px;
+    background: #fff;
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: .7rem .75rem;
+    font-size: .82rem;
+    line-height: 1.35;
+  }
+  .pipe-step strong {
+    display: block;
+    font-family: var(--font-display);
+    font-size: .9rem;
+    margin-bottom: .25rem;
+    color: #3e2723;
+  }
+  .pipe-step.api { border-top: 4px solid var(--random); }
+  .pipe-step.web { border-top: 4px solid var(--personal); }
+  .pipe-step.shared { border-top: 4px solid var(--live); }
+  .pipe-step.tf { border-top: 4px solid #a5623f; }
+  .pipe-arrow {
+    display: flex;
+    align-items: center;
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 1.1rem;
+    flex: 0 0 auto;
+  }
+  @media (max-width: 700px) {
+    .path-compare { grid-template-columns: 1fr; }
+    .pipe-arrow { display: none; }
+    .pipe-step { max-width: none; flex: 1 1 100%; }
+  }
+
+  .stack-1 { display: grid; grid-template-columns: 1fr; gap: 1.4rem; min-width: 0; }
 </style>
 </head>
 <body>
@@ -364,11 +477,13 @@ flowchart TB
     <h2>2. GitHub repositories</h2>
     <p class="lede">Two independent public repositories under the <code>jhgcc1</code> account, each with its own CI/CD, but following exactly the same branching strategy.</p>
 
+    <div class="table-wrap">
     <table>
       <tr><th>Repository</th><th>Content</th><th>Local path</th></tr>
       <tr><td><code>jhgcc1/turboai-notes-api</code></td><td>Django/DRF, Terraform (<code>terraform/</code>), AWS MCP (<code>mcp/</code>)</td><td><code>/home/jhgcc1/turboai/backend</code></td></tr>
       <tr><td><code>jhgcc1/turboai-notes-web</code></td><td>Next.js (App Router), static export</td><td><code>/home/jhgcc1/turboai/frontend</code></td></tr>
     </table>
+    </div>
 
     <div class="diagram-box">
       <pre class="mermaid">
@@ -389,6 +504,7 @@ flowchart LR
     </div>
 
     <h3>Branch protection (actual state today, verified via the GitHub API)</h3>
+    <div class="table-wrap">
     <table class="tight">
       <tr><th>Rule</th><th><code>main</code> (both repos)</th><th><code>develop</code></th></tr>
       <tr><td>Required PR approvals</td><td>1</td><td>unprotected</td></tr>
@@ -397,6 +513,7 @@ flowchart LR
       <tr><td>Required status checks (CI)</td><td><strong>not configured</strong></td><td>—</td></tr>
       <tr><td>Force-push / delete</td><td>blocked</td><td>allowed</td></tr>
     </table>
+    </div>
     <div class="callout warn">
       <div class="callout-title">⚠️ Warning — gap between plan and reality</div>
       <p><code>docs/process/00-MASTER-PLAN.md</code> lists "branch protection on <code>main</code>" as a pending item. Today there is <strong>1 required approval</strong> on <code>main</code> in both repos, but <strong>CI is not a required status check</strong> — meaning a PR can technically be merged into <code>main</code> even with a red <code>CI</code> workflow, as long as it has 1 approval. The GitHub Environments <code>staging</code>/<code>prod</code> also have no <code>protection_rules</code> (no required reviewer before applying to prod).</p>
@@ -405,81 +522,145 @@ flowchart LR
 
   <section class="card anchor-offset" id="cicd">
     <h2>3. GitHub Actions / CI-CD</h2>
-    <p class="lede">Each repository has exactly three workflows: <code>ci.yml</code>, <code>deploy.yml</code>, and <code>ai-review.yml</code>. No other workflow exists today.</p>
+    <p class="lede">Each repository has exactly three workflows: <code>ci.yml</code>, <code>deploy.yml</code>, and <code>ai-review.yml</code>. Deploys are two independent pipelines (API + web) that share the same triggers and the same OIDC role — but only the <strong>API</strong> repo runs Terraform.</p>
 
-    <div class="grid-2">
+    <h3>Staging vs prod — how a deploy starts</h3>
+    <div class="path-compare">
+      <div class="path-card staging">
+        <h4>■ Staging</h4>
+        <p><strong>Trigger:</strong> push / merge into <code>develop</code> (or <code>workflow_dispatch</code> with <code>staging</code>).</p>
+        <ul>
+          <li>GitHub Environment <code>staging</code></li>
+          <li>Terraform dir <code>terraform/envs/staging</code> (API only)</li>
+          <li>Both repos run their own <code>deploy.yml</code> in parallel</li>
+        </ul>
+      </div>
+      <div class="path-card prod">
+        <h4>■ Prod</h4>
+        <p><strong>Trigger:</strong> published GitHub Release (or <code>workflow_dispatch</code> with <code>prod</code>). Merge to <code>main</code> alone does <strong>not</strong> deploy.</p>
+        <ul>
+          <li>GitHub Environment <code>prod</code> (no required reviewer today)</li>
+          <li>Terraform dir <code>terraform/envs/prod</code> (API only)</li>
+          <li>First exercised 2026-08-10 via Releases</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Shared deploy path (annotated pipeline)</h3>
+    <div class="pipeline" aria-label="Deploy pipeline steps">
+      <div class="pipe-step shared"><strong>1. Secrets</strong>GitHub Secrets + Environment secrets feed the job (<code>AWS_ROLE_ARN</code>, API: <code>DB_PASSWORD</code>/<code>DJANGO_SECRET_KEY</code>, web: <code>API_URL</code>/<code>WEB_BUCKET</code>/…)</div>
+      <div class="pipe-arrow" aria-hidden="true">→</div>
+      <div class="pipe-step shared"><strong>2. CI gate</strong><code>deploy.yml</code> <code>needs: ci</code> — reuses <code>ci.yml</code> via <code>workflow_call</code></div>
+      <div class="pipe-arrow" aria-hidden="true">→</div>
+      <div class="pipe-step shared"><strong>3. OIDC</strong><code>configure-aws-credentials</code> assumes <code>turboai-notes-github-actions</code></div>
+      <div class="pipe-arrow" aria-hidden="true">→</div>
+      <div class="pipe-step api"><strong>4a. API image</strong>Target-apply ECR → <code>docker build/push</code> <code>:sha</code> + <code>:latest</code></div>
+      <div class="pipe-arrow" aria-hidden="true">→</div>
+      <div class="pipe-step tf"><strong>4b. Terraform</strong>API only: <code>plan/apply</code> stack + observability (Lambda zip via <code>archive_file</code>)</div>
+      <div class="pipe-arrow" aria-hidden="true">→</div>
+      <div class="pipe-step api"><strong>5a. ECS</strong><code>update-service --force-new-deployment</code> → Fargate pulls new image</div>
+      <div class="pipe-arrow" aria-hidden="true">→</div>
+      <div class="pipe-step web"><strong>5b. Web</strong>No Terraform — <code>next build</code> → S3 sync → CloudFront invalidation</div>
+    </div>
+
+    <div class="diagram-box">
+      <pre class="mermaid">
+flowchart TB
+  subgraph TRIG["Triggers — same for both repos"]
+    ST["push / merge to develop<br/>→ Environment staging"]
+    PR["GitHub Release published<br/>→ Environment prod"]
+    WD["workflow_dispatch<br/>pick staging or prod"]
+  end
+
+  CI["ci.yml quality gate<br/>workflow_call from deploy.yml"]
+  OIDC["OIDC AssumeRole<br/>secrets.AWS_ROLE_ARN<br/>role turboai-notes-github-actions"]
+
+  subgraph API["turboai-notes-api deploy.yml"]
+    direction TB
+    SECA["GitHub Secrets → TF_VAR_*<br/>DB_PASSWORD, DJANGO_SECRET_KEY<br/>+ TF_VAR_image_tag = github.sha"]
+    ECR["Target-apply ECR if needed<br/>then docker push :sha and :latest"]
+    TF["terraform init / plan / apply<br/>terraform/envs/{staging|prod}"]
+    STACK["modules/stack<br/>VPC · ALB · ECR · ECS Fargate<br/>RDS · S3 web · CloudFront api+web<br/>bastion · SM django/db secrets"]
+    OBS["modules/observability<br/>log groups · metric filter · alarms<br/>SNS · DynamoDB fingerprints<br/>triage Lambda + SM llm/jira placeholders"]
+    ZIP["archive_file builds Lambda zip<br/>from observability/*.py<br/>+ copy of apps/ and config/<br/>~43 KB — no separate build job"]
+    ECS["ecs update-service<br/>--force-new-deployment<br/>wait services-stable"]
+    SMKA["Smoke: /api/health/ + /api/docs/"]
+  end
+
+  subgraph WEB["turboai-notes-web deploy.yml"]
+    direction TB
+    SECW["GitHub Secrets from API TF outputs<br/>API_URL · WEB_BUCKET<br/>CLOUDFRONT_ID · WEB_URL<br/>does NOT run Terraform"]
+    NEXT["next build<br/>NEXT_PUBLIC_API_URL = API_URL"]
+    S3["aws s3 sync out/ → WEB_BUCKET"]
+    CF["cloudfront create-invalidation /*"]
+    SMKW["Smoke: curl WEB_URL"]
+  end
+
+  ST --> CI
+  PR --> CI
+  WD --> CI
+  CI --> OIDC
+  OIDC --> SECA
+  OIDC --> SECW
+  SECA --> ECR --> TF
+  TF --> STACK
+  TF --> OBS
+  OBS --> ZIP
+  TF --> ECS --> SMKA
+  SECW --> NEXT --> S3 --> CF --> SMKW
+
+  classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
+  classDef prod fill:#e7f0e3,stroke:#6b9e6e,stroke-width:1.5px,color:#2e5230;
+  classDef api fill:#fdf0dd,stroke:#a5623f,stroke-width:1.5px,color:#3e2723;
+  classDef web fill:#eaf3f0,stroke:#5f8f7a,stroke-width:1.5px,color:#1f3b2b;
+  class ST,WD live;
+  class PR prod;
+  class SECA,ECR,TF,STACK,OBS,ZIP,ECS,SMKA api;
+  class SECW,NEXT,S3,CF,SMKW web;
+      </pre>
+      <div class="caption">Fig. 3 — Deploy path: GitHub Secrets/Environments → OIDC → API (ECR + Terraform including triage Lambda zip → ECS Fargate) in parallel with web (consume TF-output secrets → S3 + CloudFront). Staging = blue trigger, prod = green trigger.</div>
+    </div>
+
+    <h3>Where secrets enter the pipeline</h3>
+    <div class="table-wrap">
+    <table class="tight">
+      <tr><th>Secret / input</th><th>Where it lives</th><th>Who reads it</th><th>What it becomes</th></tr>
+      <tr><td><code>AWS_ROLE_ARN</code></td><td><span class="badge gh">GitHub Secrets</span> (both repos + Environments)</td><td>API + web <code>deploy.yml</code></td><td>OIDC assume-role only — never an app env var</td></tr>
+      <tr><td><code>DB_PASSWORD</code>, <code>DJANGO_SECRET_KEY</code></td><td><span class="badge gh">GitHub Secrets</span> (api repo)</td><td>API Terraform as <code>TF_VAR_*</code></td><td>RDS master password + <span class="badge sm">Secrets Manager</span> → ECS <code>secrets:</code> block</td></tr>
+      <tr><td><code>API_URL</code>, <code>WEB_BUCKET</code>, <code>CLOUDFRONT_ID</code>, <code>WEB_URL</code></td><td><span class="badge gh">GitHub Secrets</span> (web repo; filled from API TF outputs)</td><td>web <code>deploy.yml</code> only</td><td>Build-time <code>NEXT_PUBLIC_API_URL</code>, S3 sync target, CF invalidation, smoke URL</td></tr>
+      <tr><td>MiniMax / Jira credentials</td><td><span class="badge sm">Secrets Manager</span> placeholders from observability module</td><td>triage Lambda at runtime</td><td><strong>Not</strong> in GitHub Actions — operator <code>put-secret-value</code> out of band</td></tr>
+    </table>
+    </div>
+
+    <h3>Workflow tables (per repository)</h3>
+    <div class="stack-1">
       <div>
-        <h3>turboai-notes-api</h3>
+        <h4>turboai-notes-api</h4>
+        <div class="table-wrap">
         <table class="tight">
           <tr><th>Workflow</th><th>Trigger</th><th>What it does</th></tr>
           <tr><td><code>ci.yml</code></td><td><code>pull_request</code>, <code>push</code> on <code>main</code>/<code>develop</code>, <code>workflow_call</code></td><td>Python 3.12 → <code>ruff format --check</code>, <code>ruff check</code>, <code>mypy</code> (<strong>non-blocking</strong>, runs with <code>|| true</code>), <code>pytest</code> (100% coverage on <code>apps/</code>)</td></tr>
-          <tr><td><code>deploy.yml</code></td><td><code>push:develop</code> → staging; <code>release:published</code> → prod; <code>workflow_dispatch</code></td><td>OIDC → ECR push (image <code>:sha</code> and <code>:latest</code>) → <code>terraform init/plan/apply</code> in <code>terraform/envs/{staging|prod}</code> → <code>ecs update-service --force-new-deployment</code> → smoke test on <code>/api/health/</code> and <code>/api/docs/</code></td></tr>
+          <tr><td><code>deploy.yml</code></td><td><code>push:develop</code> → staging; <code>release:published</code> → prod; <code>workflow_dispatch</code></td><td>OIDC → target-apply ECR → docker push <code>:sha</code>/<code>:latest</code> → full <code>terraform apply</code> (<code>modules/stack</code> + <code>modules/observability</code>, Lambda zip via <code>archive_file</code>) → <code>ecs update-service --force-new-deployment</code> → smoke <code>/api/health/</code> and <code>/api/docs/</code></td></tr>
           <tr><td><code>ai-review.yml</code></td><td><code>pull_request</code> (opened/synchronize/reopened)</td><td>Heuristic regex-based comment on the diff (not an LLM): detects hardcoded <code>SECRET_KEY</code>, <code>localStorage</code> with a token, password without <code>validate_password</code>, <code>eval(</code>)</td></tr>
         </table>
+        </div>
       </div>
       <div>
-        <h3>turboai-notes-web</h3>
+        <h4>turboai-notes-web</h4>
+        <div class="table-wrap">
         <table class="tight">
           <tr><th>Workflow</th><th>Trigger</th><th>What it does</th></tr>
           <tr><td><code>ci.yml</code></td><td>same as API</td><td>Node 20 → <code>prettier --check</code>, <code>eslint</code>, <code>tsc --noEmit</code>, <code>vitest run --coverage</code> (100% coverage on <code>src/</code>, except <code>layout.tsx</code>)</td></tr>
           <tr><td><code>deploy.yml</code></td><td>same as API</td><td>OIDC → <strong>does not run Terraform</strong> (consumes secrets already filled in from the API's Terraform outputs) → <code>next build</code> with build-time <code>NEXT_PUBLIC_API_URL</code> → <code>aws s3 sync out/</code> → <code>cloudfront create-invalidation "/*"</code> → smoke <code>curl</code> against WEB_URL</td></tr>
           <tr><td><code>ai-review.yml</code></td><td>same as API</td><td>Regex heuristic: <code>localStorage</code> + token, <code>NEXT_PUBLIC_*SECRET/PASSWORD</code>, auth/ownership logic leaking into the frontend</td></tr>
         </table>
+        </div>
       </div>
     </div>
 
-    <h3>Sequence: push to <code>develop</code> → automatic staging deploy</h3>
-    <div class="diagram-box">
-      <pre class="mermaid">
-sequenceDiagram
-  actor Dev as Developer
-  participant GH as GitHub (develop)
-  participant CI as ci.yml (quality)
-  participant DPL as deploy.yml
-  participant AWS as AWS (OIDC AssumeRole)
-  participant ECR as ECR
-  participant TF as Terraform
-  participant ECS as ECS Fargate
-  participant S3 as S3 + CloudFront (web)
-
-  Dev->>GH: git push / merge PR into develop
-  GH->>DPL: triggers deploy.yml (push:develop)
-  DPL->>CI: needs: ci (reuses ci.yml via workflow_call)
-  CI-->>DPL: lint / typecheck / tests / coverage OK
-  DPL->>AWS: configure-aws-credentials (secrets.AWS_ROLE_ARN, OIDC)
-  Note over DPL,ECR: turboai-notes-api repository
-  DPL->>ECR: docker build + push image :sha and :latest
-  DPL->>TF: terraform init / plan / apply (terraform/envs/staging)
-  DPL->>ECS: update-service --force-new-deployment + wait services-stable
-  DPL->>DPL: smoke test GET /api/health/ and /api/docs/
-  Note over DPL,S3: turboai-notes-web repository (parallel, independent workflow)
-  DPL->>S3: next build (NEXT_PUBLIC_API_URL=secrets.API_URL) + s3 sync out/
-  DPL->>S3: cloudfront create-invalidation --paths "/*"
-  DPL->>DPL: smoke test curl against WEB_URL
-      </pre>
-      <div class="caption">Fig. 3 — Each push/merge to <code>develop</code> triggers <strong>two</strong> independent deploy workflows (one per repository), both using the same OIDC role.</div>
-    </div>
-
-    <h3>Sequence: publish a Release → prod deploy (exercised 2026-08-10)</h3>
-    <div class="diagram-box">
-      <pre class="mermaid">
-sequenceDiagram
-  actor M as Maintainer
-  participant GH as GitHub
-  participant DPL as deploy.yml
-  participant ENV as Environment "prod"
-  participant AWS as AWS (OIDC)
-  participant TF as Terraform (envs/prod)
-
-  M->>GH: Publish GitHub Release (from main)
-  GH->>DPL: triggers deploy.yml (release: published)
-  DPL->>ENV: uses Environment "prod" — no required reviewer today
-  DPL->>AWS: configure-aws-credentials (secrets.AWS_ROLE_ARN)
-  DPL->>TF: terraform init / plan / apply (terraform/envs/prod)
-  Note over TF: Applied — API https://djnxnkcoh52pi.cloudfront.net<br/>Web https://doj4lx2n5ynh4.cloudfront.net
-  DPL-->>M: Job summary + smoke health/docs
-      </pre>
-      <div class="caption">Fig. 4 — Prod path: merge to <code>main</code> alone does <strong>not</strong> deploy; a published GitHub Release triggers Terraform apply + ECS/S3 ship.</div>
+    <div class="callout info">
+      <div class="callout-title">ℹ️ Triage Lambda is updated by API Terraform — not a separate CI job</div>
+      <p>On every API deploy, <code>modules/observability</code> rebuilds the function package with Terraform <code>archive_file</code> from <code>backend/observability/</code> (plus a copy of <code>apps/</code> and <code>config/</code> for source quoting). The zip is ~43&nbsp;KB; there is no Docker image and no extra GitHub workflow for the Lambda. Web deploy never touches it.</p>
     </div>
 
     <div class="callout warn">
@@ -524,10 +705,11 @@ flowchart TB
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
   class ALB,ECS,BAST,RDS,ECR,CW,OBS,ROLE_EXEC,ROLE_TASK,SM live;
       </pre>
-      <div class="caption">Fig. 5 — AWS resource map for <strong>staging</strong>. Prod is the same module applied again with CIDR <code>10.1.0.0/16</code>, <code>deletion_protection=true</code>, 30-day log retention (vs 7), tighter alarm thresholds, and names with a <code>-prod</code> suffix. Backups stay at 1 day in both environments (free-tier accounts reject a longer retention). Everything the observability module adds on top of this map is in <a href="#observability">section 5</a>.</div>
+      <div class="caption">Fig. 4 — AWS resource map for <strong>staging</strong>. Prod is the same module applied again with CIDR <code>10.1.0.0/16</code>, <code>deletion_protection=true</code>, 30-day log retention (vs 7), tighter alarm thresholds, and names with a <code>-prod</code> suffix. Backups stay at 1 day in both environments (free-tier accounts reject a longer retention). Everything the observability module adds on top of this map is in <a href="#observability">section 5</a>.</div>
     </div>
 
     <h3>Resource inventory by category</h3>
+    <div class="table-wrap">
     <table>
       <tr><th>Category</th><th>Resources (Terraform)</th><th>Detail</th></tr>
       <tr><td><strong>Networking</strong></td><td><code>aws_vpc</code>, <code>aws_internet_gateway</code>, 2 public subnets + 2 private, <code>aws_route_table</code> (public → IGW)</td><td>No NAT Gateway — there is no <code>aws_nat_gateway</code> resource; ECS tasks run in a public subnet with their own public IP</td></tr>
@@ -543,6 +725,7 @@ flowchart TB
       <tr><td><strong>Error triage (serverless)</strong><br/><small>(<code>modules/observability</code>)</small></td><td><code>aws_lambda_function.{env}-triage</code> (python3.12, 512&nbsp;MB, 180&nbsp;s), <code>aws_dynamodb_table.{env}-error-fingerprints</code> (PAY_PER_REQUEST, TTL), <code>aws_secretsmanager_secret.{env}-llm-credentials</code>, <strong>optionally</strong> <code>aws_secretsmanager_secret.{env}-jira-credentials</code> (created <code>count = var.jira_enabled ? 1 : 0</code>), <code>aws_lambda_permission</code> + <code>aws_sns_topic_subscription</code> (lambda)</td><td>Zip built by <code>archive_file</code> from the working tree (~43&nbsp;KB, no build step) and carries a copy of <code>apps/</code> + <code>config/</code> so the function can quote the failing source lines. Both secrets are created with a <code>REPLACE_ME</code> placeholder and <code>ignore_changes</code>, so the MiniMax key and the Jira API token never enter the state file. The Lambda reads each secret at runtime via its own Secrets Manager id; an HTTP Basic auth header is built per Jira call and never logged.</td></tr>
       <tr><td><strong>Bastion</strong></td><td><code>aws_instance.bastion</code> — <code>t4g.micro</code>, Amazon Linux 2023 ARM64, IMDSv2 required</td><td>Used exclusively for the MCP SSH tunnel (section 8); also reachable via SSM Session Manager</td></tr>
     </table>
+    </div>
 
     <h3>IAM — GitHub OIDC deploy role (outside Terraform)</h3>
     <div class="kv">
@@ -601,7 +784,7 @@ flowchart TB
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
   class FE,APP,DRV,LG,MF,MET,ALARM,TAL,LAM,INS,DDB,SRC,LLM,JIRA,TRP,MAIL,INFRA live;
       </pre>
-      <div class="caption">Fig. 6 — End-to-end path for <strong>staging</strong> (prod is the same module with lower thresholds). FE and BE both emit structured ERROR logs into the same CloudWatch group; the triage Lambda is the only place MiniMax runs. The first sighting of a fingerprint files a Jira <strong>KAN</strong> ticket (with a Logs Insights deep link) and emails a report with failing source lines and a candidate patch.</div>
+      <div class="caption">Fig. 5 — End-to-end path for <strong>staging</strong> (prod is the same module with lower thresholds). FE and BE both emit structured ERROR logs into the same CloudWatch group; the triage Lambda is the only place MiniMax runs. The first sighting of a fingerprint files a Jira <strong>KAN</strong> ticket (with a Logs Insights deep link) and emails a report with failing source lines and a candidate patch.</div>
     </div>
 
     <h3>Two SNS topics, on purpose</h3>
@@ -611,6 +794,7 @@ flowchart TB
     <p>Every log line is a single JSON object produced by <code>JsonFormatter</code> in <code>config/middleware.py</code>, carrying <code>level</code>, <code>logger</code>, <code>message</code>, <code>time</code>, <code>service</code>, <code>environment</code>, plus whatever the call site passed as <code>extra</code>: <code>request_id</code>, <code>route</code>, <code>method</code>, <code>status</code>, <code>duration_ms</code>, <code>user_id</code>, <code>error_type</code>, <code>fingerprint</code>, and the full <code>exc_info</code> traceback on errors. <code>service</code> and <code>environment</code> come from the process environment (<code>SERVICE_NAME</code>, <code>ENVIRONMENT</code>) rather than <code>django.conf.settings</code>, because <code>LOGGING</code> is applied while settings are still being imported.</p>
 
     <h4>Where errors are captured</h4>
+    <div class="table-wrap">
     <table class="tight">
       <tr><th>Source</th><th>Level</th><th>What it logs</th></tr>
       <tr><td><code>config/exception_handler.py</code></td><td>ERROR for 5xx, <strong>WARNING for 4xx</strong></td><td>Every DRF exception — <code>turbo_exception_handler</code> is wired as <code>REST_FRAMEWORK["EXCEPTION_HANDLER"]</code>, logs with <code>exc_info</code> and a fingerprint, then defers to DRF for the actual response shape</td></tr>
@@ -618,6 +802,7 @@ flowchart TB
       <tr><td><code>apps/accounts/views.py</code></td><td>WARNING</td><td>Token blacklist and refresh rejections that used to be swallowed by a bare <code>except: pass</code></td></tr>
       <tr><td><code>apps/observability/views.py</code> + SPA <code>ClientErrorReporter</code> / <code>ErrorBoundary</code> / <code>reportUnexpected</code></td><td>ERROR</td><td>The web app is Next.js with <code>output: "export"</code> (static HTML/JS on S3+CloudFront) — <strong>no Node server</strong>, but React <code>"use client"</code> components still run in the browser. Capture is client-side: <code>window.onerror</code>, <code>unhandledrejection</code>, React <code>ErrorBoundary</code> (componentStack), and unexpected catch-path failures (API 5xx / programmer errors — not expected 401/validation). Each POSTs to <code>/api/observability/client-error/</code>; Django only logs structured ERROR (stack → JSON <code>exc_info</code>). <strong>MiniMax + Jira run only in the triage Lambda</strong>, never in the SPA or Django views.</td></tr>
     </table>
+    </div>
     <p>4xx stays at WARNING deliberately: logging client mistakes at ERROR would make the alarm — and the whole triage automation behind it — fire on ordinary bad requests. The SPA likewise skips reporting expected auth/validation failures so they do not open Jira tickets.</p>
 
     <div class="callout warn">
@@ -635,6 +820,7 @@ flowchart TB
     <h3>Fingerprints and deduplication</h3>
     <p><code>config/fingerprint.py</code> hashes three things into a 16-character key: the <strong>exception type</strong>, the <strong>normalised route</strong> (numeric and UUID path segments are collapsed, so <code>/api/notes/42/</code> and <code>/api/notes/43/</code> share one route), and the <strong>deepest non-vendor traceback frame</strong>. The exception <em>message</em> is deliberately excluded — messages usually embed ids, emails or values that differ between occurrences of the same bug, which would split one recurring bug into a new fingerprint, and a new email, on every single call.</p>
     <p>State lives in DynamoDB (<code>turboai-notes-{env}-error-fingerprints</code>), keyed by fingerprint. A single <code>UpdateItem</code> with <code>ReturnValues="ALL_OLD"</code> both increments the counter and reveals whether this was the first sighting, which avoids the read-then-write race that would let two concurrent alarm deliveries both decide they are first.</p>
+    <div class="table-wrap">
     <table class="tight">
       <tr><th>Situation</th><th>Behaviour</th></tr>
       <tr><td>First sighting of a fingerprint</td><td>Send a report, subject prefixed <code>NEW</code></td></tr>
@@ -643,6 +829,7 @@ flowchart TB
       <tr><td>Alarm stays in ALARM state</td><td>Suppressed — without the counter, every evaluation period would email</td></tr>
       <tr><td>Alarm state is OK / INSUFFICIENT_DATA</td><td>Skipped: a state change is not an incident</td></tr>
     </table>
+    </div>
 
     <h3>How the Lambda reads the source code</h3>
     <p>This is the part that makes the email a debugging report rather than a log forward. Terraform's <code>archive_file</code> adds a copy of <code>apps/</code> and <code>config/</code> to the zip under <code>repo/</code>, straight from the working tree — no build step, no Lambda layer, about 43&nbsp;KB zipped. At runtime <code>triage/repo.py</code>:</p>
@@ -656,6 +843,7 @@ flowchart TB
     <p>The model receives the failing request, the traceback, a compact file index of the bundle, the resolved source excerpts, and a sample of other recent occurrences of the same fingerprint. It is asked for a root cause <em>grounded in the code shown</em>, suspected <code>file:line</code> locations, a unified diff, fix steps, reproduction steps, a severity, and a confidence rating.</p>
 
     <h4>Lambda layout (<code>backend/observability/</code>)</h4>
+    <div class="table-wrap">
     <table class="tight">
       <tr><th>File</th><th>Responsibility</th></tr>
       <tr><td><code>handler.py</code></td><td>Entrypoint <code>handler.main</code>: unwraps the SNS envelope (or a direct invocation payload), then runs the pipeline per alarm. One failing alarm never drops the rest of the batch.</td></tr>
@@ -670,6 +858,7 @@ flowchart TB
       <tr><td><code>triage/httpjson.py</code></td><td><code>urllib</code> JSON POST helper.</td></tr>
       <tr><td><code>tests/</code></td><td>Unit tests with no network and no AWS — <code>boto3</code> is imported lazily inside the functions that need it, and clients are injectable.</td></tr>
     </table>
+    </div>
     <p>The only dependencies are the standard library and the <code>boto3</code> that the Python 3.12 runtime already provides. That is what keeps the artifact small enough to be assembled by Terraform itself, with no packaging pipeline to keep in sync.</p>
 
     <div class="callout info">
@@ -678,6 +867,7 @@ flowchart TB
     </div>
 
     <h3>Alarms</h3>
+    <div class="table-wrap">
     <table class="tight">
       <tr><th>Alarm</th><th>Metric</th><th>Condition (staging / prod)</th><th>Routes to</th></tr>
       <tr><td><code>{env}-app-errors</code></td><td><code>AppErrorCount</code> (log metric filter)</td><td>Sum ≥ 5 / 5 min (prod: ≥ 3)</td><td><code>{env}-alarms</code> → triage Lambda → email (+ Jira, when <code>jira_enabled=true</code>)</td></tr>
@@ -688,9 +878,11 @@ flowchart TB
       <tr><td><code>{env}-rds-free-storage</code></td><td>RDS <code>FreeStorageSpace</code></td><td>&lt; 2 GiB (of 20 GiB allocated)</td><td><code>{env}-triage-reports</code> → email</td></tr>
       <tr><td><code>{env}-triage-failures</code></td><td>Lambda <code>Errors</code></td><td>≥ 1 in 5 min</td><td><code>{env}-triage-reports</code> → email</td></tr>
     </table>
+    </div>
     <p><code>HealthyHostCount</code> is used instead of the ECS <code>RunningTaskCount</code> metric because the latter requires Container Insights, which is not enabled on this cluster. The <code>-triage-failures</code> alarm publishes to the reports topic specifically so that a broken triage function can never trigger itself.</p>
 
     <h3>Configuration knobs</h3>
+    <div class="table-wrap">
     <table class="tight">
       <tr><th>Lambda env var</th><th>Default</th><th>Effect</th></tr>
       <tr><td><code>CW_LOG_GROUP</code>, <code>ENVIRONMENT</code>, <code>DEDUP_TABLE</code>, <code>SNS_TOPIC_ARN</code>, <code>LLM_SECRET_ID</code></td><td>set by Terraform</td><td>Wiring; the invocation fails fast with a <code>ConfigError</code> if any of these is missing</td></tr>
@@ -703,6 +895,7 @@ flowchart TB
       <tr><td><code>DRY_RUN</code></td><td><code>false</code></td><td>Runs the whole pipeline <strong>including the LLM call</strong> and writes the report to the function's own logs instead of emailing it</td></tr>
       <tr><td><code>MAX_EVENTS</code>, <code>CODE_CONTEXT_CHARS</code>, <code>CODE_WINDOW_LINES</code></td><td><code>25</code>, <code>24000</code>, <code>40</code></td><td>Sample size and prompt budget. These three have no Terraform variable yet — they fall back to the code defaults in <code>triage/settings.py</code>.</td></tr>
     </table>
+    </div>
 
     <h3>Operating it</h3>
     <h4>One-time setup after <code>terraform apply</code></h4>
@@ -755,6 +948,7 @@ flowchart TB
       <div><span class="badge local">Local (.env)</span> only on the developer's machine</div>
     </div>
 
+    <div class="table-wrap">
     <table class="tight">
       <tr><th>Name</th><th>Where it lives</th><th>How it reaches the app</th></tr>
       <tr><td><code>AWS_ROLE_ARN</code></td><td><span class="badge gh">GitHub Secrets</span> (repo + <code>staging</code>/<code>prod</code> Environments, both repos)</td><td>CI/CD only: <code>aws-actions/configure-aws-credentials</code> assumes the role via OIDC. Never becomes an app variable.</td></tr>
@@ -771,6 +965,7 @@ flowchart TB
       <tr><td><code>SECRET_KEY=unsafe-dev-only-key</code>, <code>POSTGRES_PASSWORD=turbo_dev_password</code>, etc.</td><td><span class="badge local">Local file <code>backend/.env</code></span> (gitignored)</td><td>Read via <code>python-dotenv</code> in <code>config/settings.py</code>. <code>.env.example</code> documents the keys without real values.</td></tr>
       <tr><td>Bastion SSH private key (<code>~/turbo-notes-bastion.pem</code>)</td><td><span class="badge local">Operator's disk</span> (outside the repo)</td><td>Used by the MCP (<code>tools/tunnel.py</code>) and for manual SSH. Only the <strong>public</strong> key (<code>terraform/bastion.pub</code>) is version-controlled.</td></tr>
     </table>
+    </div>
 
     <div class="callout">
       <div class="callout-title">ℹ️ The "two-hop" path for secrets is intentional</div>
@@ -783,6 +978,7 @@ flowchart TB
     </div>
 
     <h3>Other security findings still open (not fixed)</h3>
+    <div class="table-wrap">
     <table class="tight">
       <tr><th>Finding</th><th>Status</th></tr>
       <tr><td>OIDC deploy role with <code>Resource:"*"</code> across many services</td><td>Recommended, not fixed</td></tr>
@@ -791,6 +987,7 @@ flowchart TB
       <tr><td><code>mypy</code> does not block CI (<code>|| true</code>)</td><td>Recommended, not fixed</td></tr>
       <tr><td>Django's <code>/admin/</code> has no network restriction</td><td>Recommended (low priority)</td></tr>
     </table>
+    </div>
   </section>
 
   <section class="card anchor-offset" id="autenticacao">
@@ -798,12 +995,14 @@ flowchart TB
     <p class="lede">JWT (SimpleJWT) stored in <code>httpOnly</code> cookies, with CSRF via a <em>double-submit cookie</em> adapted for two different CloudFront domains (frontend and API do not share an origin).</p>
 
     <h3>Cookies and flags</h3>
+    <div class="table-wrap">
     <table class="tight">
       <tr><th>Cookie</th><th>HttpOnly</th><th>Secure</th><th>SameSite</th><th>Note</th></tr>
       <tr><td><code>access_token</code></td><td>✅</td><td><code>COOKIE_SECURE</code> (true in staging/prod)</td><td><code>COOKIE_SAMESITE</code> = <code>None</code> in staging/prod</td><td>Access JWT — 15 min by default (<code>ACCESS_TOKEN_LIFETIME_MINUTES</code>)</td></tr>
       <tr><td><code>refresh_token</code></td><td>✅</td><td>same</td><td>same</td><td>Rotates on every use (<code>ROTATE_REFRESH_TOKENS</code>), blacklisted after rotation — 7 days by default</td></tr>
       <tr><td><code>csrftoken</code> (Django)</td><td>❌ (<code>CSRF_COOKIE_HTTPONLY=False</code>, needs to be readable)</td><td><code>CSRF_COOKIE_SECURE=True</code> in staging/prod</td><td><code>CSRF_COOKIE_SAMESITE = COOKIE_SAMESITE</code> → <code>None</code> in staging/prod</td><td>Aligned with <code>COOKIE_SAMESITE</code> since the 08-09 fix (previously fixed at <code>Lax</code> — the bug)</td></tr>
     </table>
+    </div>
 
     <h3>Why "SameSite=None" and a CSRF bootstrap endpoint?</h3>
     <p>Web and API run on <strong>different CloudFront domains</strong> (<code>d1qdib1mcwro0s...</code> vs <code>d1ukfp2c7u1v45...</code>) — there is no shared subdomain or common app cookie. This creates two problems solved in <code>docs/process/10-csrf-cross-origin-fix.md</code>:</p>
@@ -841,7 +1040,7 @@ sequenceDiagram
   FE->>API: POST /api/notes/ (Cookie access_token, no X-CSRFToken)
   API-->>FE: 403 "CSRF Failed: ..."
       </pre>
-      <div class="caption">Fig. 7 — Full flow: CSRF bootstrap → login → authenticated mutable request. Verified live on staging: no <code>X-CSRFToken</code> → 403; with the header → 200/201.</div>
+      <div class="caption">Fig. 6 — Full flow: CSRF bootstrap → login → authenticated mutable request. Verified live on staging: no <code>X-CSRFToken</code> → 403; with the header → 200/201.</div>
     </div>
 
     <h3>Implementation details</h3>
@@ -857,12 +1056,14 @@ sequenceDiagram
     </div>
 
     <h3>CORS — locked down per environment</h3>
+    <div class="table-wrap">
     <table class="tight">
       <tr><th>Environment</th><th><code>CORS_ALLOWED_ORIGINS</code> / <code>CSRF_TRUSTED_ORIGINS</code></th></tr>
       <tr><td>Local</td><td><code>http://localhost:3000</code> (+ <code>127.0.0.1:3000</code>)</td></tr>
       <tr><td>Staging</td><td><code>https://d1qdib1mcwro0s.cloudfront.net</code> — <strong>only</strong> that environment's web CloudFront origin</td></tr>
       <tr><td>Prod</td><td><code>https://doj4lx2n5ynh4.cloudfront.net</code> — <strong>only</strong> that environment's web CloudFront origin (not staging)</td></tr>
     </table>
+    </div>
     <p><code>CORS_ALLOW_CREDENTIALS = True</code> with <code>CORS_ALLOW_ALL_ORIGINS = False</code> — a required combination (credentials + wildcard is rejected by <code>django-cors-headers</code> itself). A guard function in <code>config/settings.py</code> (<code>_assert_deployed_origin_allowlist</code>) refuses to start with <code>ENVIRONMENT</code> set to staging/production if the allowlist is empty, contains a wildcard, or contains <code>localhost</code>.</p>
 
     <div class="callout">
@@ -899,10 +1100,11 @@ flowchart LR
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
   class MCP,Bastion,RDS,AWSAPI live;
       </pre>
-      <div class="caption">Fig. 8 — MCP data path: SSO/logs hit AWS APIs directly; database tools require an SSH tunnel through the IP-restricted bastion.</div>
+      <div class="caption">Fig. 7 — MCP data path: SSO/logs hit AWS APIs directly; database tools require an SSH tunnel through the IP-restricted bastion.</div>
     </div>
 
     <h4>Tool groups</h4>
+    <div class="table-wrap">
     <table class="tight">
       <tr><th>Category</th><th>Tools</th><th>How they behave</th></tr>
       <tr><td>SSO / session</td><td><code>aws_sso_status</code>, <code>aws_sso_login</code></td><td>Ensure profile <code>AdministratorAccess-615737882760</code> is valid; login writes/refreshes <code>~/.aws</code> as needed</td></tr>
@@ -913,6 +1115,7 @@ flowchart LR
       <tr><td>Seed</td><td><code>seed_staging</code></td><td>Staging only; prefers <code>POST /api/seed/</code> so app validations still run</td></tr>
       <tr><td>Logs</td><td><code>logs_list_groups</code>, <code>logs_tail</code>, <code>logs_insights</code></td><td>CloudWatch under the <code>/turboai/notes</code> prefix — no tunnel required. Every line is a JSON object (<a href="#observability">section 5</a>): query with <code>filter level = "ERROR"</code> or <code>filter fingerprint = "…"</code> in <code>logs_insights</code>; in <code>logs_tail</code> the <code>[ERROR]</code> message prefix is what makes errors greppable in plain text.</td></tr>
     </table>
+    </div>
 
     <div class="callout info">
       <div class="callout-title">ℹ️ MCP logs are the manual counterpart to automated triage</div>
@@ -926,13 +1129,16 @@ flowchart LR
 
     <h3>Cursor Skills (<code>.cursor/skills/</code>)</h3>
     <p>Skills are markdown playbooks the agent loads on demand. They do <strong>not</strong> replace GitHub Actions; they drive the human-in-the-loop loop around CI and staging verification.</p>
+    <div class="table-wrap">
     <table class="tight">
       <tr><th>Skill</th><th>How it works</th><th>Relation to CI</th><th>When to invoke</th></tr>
       <tr><td><code>pr-review-loop</code></td><td><strong>Open-PR mode:</strong> list open PRs on <code>turboai-notes-api</code> / <code>turboai-notes-web</code>, checkout, run local quality gates, apply clear review-comment fixes, commit, push, wait for checks. <strong>General mode:</strong> same review→fix→pipeline loop over uncommitted work or the whole tree without requiring an open PR.</td><td>Runs the same quality bar CI cares about (backend ruff/pytest; frontend format/lint/typecheck/test), then watches <code>gh pr checks</code> / Deploy until green. Does not merge unless asked.</td><td>"Review the open PRs", "get this ready to merge", or a quality/security pass before merging</td></tr>
       <tr><td><code>e2e-notes</code></td><td>Reads <code>docs/e2e.md</code>, asks all vs selected cases (E1–E10), drives UI via Playwright/Chrome MCP, API via <code>curl</code> + cookie jar, DB via local <code>psql</code> or MCP <code>db_query</code>, writes <code>docs/e2e-report.md</code>, fixes failures and re-runs until pass.</td><td>Complements unit-test CI: exercises cross-origin auth/CSRF and real browser flows that pytest/Jest do not cover. Often run against local compose or staging CloudFront URLs after Deploy.</td><td>After auth/CSRF/UI changes, or before calling a feature "done"</td></tr>
     </table>
+    </div>
 
     <h3>Decision guide — "I want X → use Y"</h3>
+    <div class="table-wrap">
     <table>
       <tr><th>I want to...</th><th>Use this</th></tr>
       <tr><td>See recent API error logs on staging</td><td>MCP <code>logs_tail</code> or <code>logs_insights</code> (<code>env="staging"</code>) — filter on <code>level = "ERROR"</code></td></tr>
@@ -950,6 +1156,7 @@ flowchart LR
       <tr><td>Validate login, notes CRUD, and per-user isolation end-to-end</td><td>Skill <code>e2e-notes</code></td></tr>
       <tr><td>Ship infra/app changes to staging</td><td>Push/merge to <code>develop</code> → GitHub Actions <strong>Deploy</strong> (not the MCP)</td></tr>
     </table>
+    </div>
 
     <div class="callout">
       <div class="callout-title">ℹ️ When <strong>not</strong> to use the MCP</div>
@@ -982,10 +1189,11 @@ flowchart TD
   class A,B,C,D,E,F,G,H,I,J,K live;
   class L,M prod;
       </pre>
-      <div class="caption">Fig. 9 — Full lifecycle of a feature, from code to staging and (via Release) prod.</div>
+      <div class="caption">Fig. 8 — Full lifecycle of a feature, from code to staging and (via Release) prod.</div>
     </div>
 
     <h3>Where each piece fits, in detail</h3>
+    <div class="table-wrap">
     <table>
       <tr><th>Step</th><th>Where / files</th></tr>
       <tr><td>Data model</td><td><code>backend/apps/notes/models.py</code> (e.g., new <code>Tag</code> model, <code>ManyToManyField</code> on <code>Note</code>) + <code>python manage.py makemigrations</code> → <code>apps/notes/migrations/000X_*.py</code></td></tr>
@@ -1003,6 +1211,7 @@ flowchart TD
       <tr><td>Testing on staging</td><td>Real CloudFront URLs (section 1), the <code>e2e-notes</code> skill, or <code>db_query</code> via MCP to inspect the database</td></tr>
       <tr><td>Prod deploy</td><td>PR <code>develop</code> → <code>main</code> (1 approval) → published <code>gh release create</code> → <code>deploy.yml</code> (environment <code>prod</code>). Live: web <code>https://doj4lx2n5ynh4.cloudfront.net</code>, API <code>https://djnxnkcoh52pi.cloudfront.net</code> — see <code>docs/process/16-prod-deploy.md</code></td></tr>
     </table>
+    </div>
 
     <div class="callout">
       <div class="callout-title">ℹ️ Quick command to run everything locally</div>
@@ -1024,12 +1233,14 @@ docker compose up --build
     <h2>10. Docker &amp; Docker Compose — exact scope of each file</h2>
     <p class="lede">There are three Dockerfiles/compose files in this monorepo. It's easy to assume all of it goes to AWS — <strong>it doesn't</strong>. Only one piece (the backend image) makes it to production; the rest is a local development tool.</p>
 
+    <div class="table-wrap">
     <table>
       <tr><th>File</th><th>Used in production/AWS?</th><th>Role</th></tr>
       <tr><td><code>backend/Dockerfile</code></td><td><strong>Yes</strong> — it's the <em>same</em> image</td><td>A single build (<code>python:3.12-slim</code> + <code>gunicorn</code> via <code>scripts/entrypoint.sh</code>) used both by local <code>docker compose up</code> and by <code>deploy.yml</code>'s <code>docker build</code>, which pushes this same image to ECR (<code>:sha</code> and <code>:latest</code>) and ECS Fargate runs it in staging/prod.</td></tr>
       <tr><td><code>backend/docker-compose.yml</code></td><td><strong>No</strong> — local dev only</td><td>Orchestrates 3 services (<code>db</code>, <code>api</code>, <code>web</code>) to run the whole stack on the developer's machine. Never referenced by any CI/CD workflow and has no production equivalent — ECS Fargate doesn't use Compose, each service is a separate Terraform <code>task definition</code>.</td></tr>
       <tr><td><code>frontend/Dockerfile</code> (+ <code>nginx.conf</code>)</td><td><strong>No</strong> — local dev only, inside Compose</td><td>Multi-stage build: <code>node:20-alpine</code> compiles (<code>next build</code> → static export in <code>/app/out</code>) and a final <code>nginx:alpine</code> stage serves those static files on port 3000, only for Compose's <code>web</code> service. In staging/prod the same <code>next build</code> (static export) is served directly from <strong>S3 + CloudFront</strong> — there's no container, EC2 instance, or nginx running the frontend on AWS.</td></tr>
     </table>
+    </div>
 
     <div class="diagram-box">
       <pre class="mermaid">
@@ -1055,7 +1266,7 @@ flowchart LR
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
   class DB,API_L,WEB_L,IMG,ECRX,ECSX,RDSX,NEXT,S3X,CFX live;
       </pre>
-      <div class="caption">Fig. 10 — <code>docker-compose.yml</code> and the frontend <code>Dockerfile</code> only exist on the left side (the developer's laptop). On AWS, only the <code>backend/Dockerfile</code> image survives — the frontend becomes static files on S3/CloudFront.</div>
+      <div class="caption">Fig. 9 — <code>docker-compose.yml</code> and the frontend <code>Dockerfile</code> only exist on the left side (the developer's laptop). On AWS, only the <code>backend/Dockerfile</code> image survives — the frontend becomes static files on S3/CloudFront.</div>
     </div>
 
     <h3>Local commands (identical to those in section 9)</h3>
