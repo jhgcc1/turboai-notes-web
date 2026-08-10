@@ -241,7 +241,7 @@
     <p class="subtitle">Django/DRF (API) + Next.js (UI) · AWS account <code>615737882760</code> · built with Cursor (Grok 4.5 High Fast)</p>
     <div>
       <span class="pill live">✅ Staging — live today</span>
-      <span class="pill pending">🚧 Prod — not deployed yet</span>
+      <span class="pill" style="background:var(--pending-bg);color:#2e5230;border-color:var(--pending)">✅ Prod — live</span>
       <span class="pill">JWT Cookie + CSRF</span>
       <span class="pill">ECS Fargate (not App Runner)</span>
       <span class="pill">2 GitHub repositories</span>
@@ -267,7 +267,7 @@
     <h4 style="margin-top:1.2rem;">Legend</h4>
     <div class="legend" style="flex-direction:column; gap:.4rem;">
       <div><span class="sw" style="background:var(--live)"></span>Deployed / live</div>
-      <div><span class="sw" style="background:var(--pending)"></span>Not deployed yet</div>
+      <div><span class="sw" style="background:var(--pending)"></span>Prod (green) — live</div>
     </div>
   </nav>
 
@@ -275,7 +275,7 @@
 
   <section class="card anchor-offset" id="visao-geral">
     <h2>1. Architecture overview</h2>
-    <p class="lede">Two independent applications (front and back), each in its own GitHub repository, deployed via Terraform to two isolated AWS environments. <strong>Staging is live</strong>; <strong>prod exists only as Terraform code — never applied</strong>.</p>
+    <p class="lede">Two independent applications (front and back), each in its own GitHub repository, deployed via Terraform to two isolated AWS environments. <strong>Staging and production are both live</strong> in account <code>615737882760</code> (<code>us-east-2</code>).</p>
 
     <div class="diagram-box">
       <pre class="mermaid">
@@ -297,35 +297,37 @@ flowchart TB
     ECS_S -. logs .-> CW_S
   end
 
-  subgraph PRD["PROD — not deployed yet 🚧 (same Terraform module)"]
+  subgraph PRD["PROD — live ✅ (same Terraform module)"]
     direction TB
-    CFW_P["CloudFront (web) — to be created"]
-    S3_P["S3 turboai-notes-prod-web-... — to be created"]
-    CFA_P["CloudFront (api) — to be created"]
-    ALB_P["ALB turboai-notes-prod-alb — to be created"]
-    ECS_P["ECS Fargate — turboai-notes-prod — to be created"]
-    RDS_P[("RDS Postgres 16<br/>turboai-notes-prod-pg — to be created")]
+    CFW_P["CloudFront (web)<br/>doj4lx2n5ynh4.cloudfront.net"]
+    S3_P["S3 turboai-notes-prod-web-615737882760<br/>Next.js static export"]
+    CFA_P["CloudFront (api)<br/>djnxnkcoh52pi.cloudfront.net"]
+    ALB_P["ALB turboai-notes-prod-alb (HTTP :80)"]
+    ECS_P["ECS Fargate — turboai-notes-prod<br/>container api :8000 (gunicorn/Django)"]
+    RDS_P[("RDS Postgres 16<br/>turboai-notes-prod-pg (db.t4g.micro)")]
+    CW_P["CloudWatch Logs<br/>/turboai/notes/prod/api"]
     CFW_P --> S3_P
     CFA_P --> ALB_P --> ECS_P
     ECS_P --> RDS_P
+    ECS_P -. logs .-> CW_P
   end
 
   U -->|HTTPS| CFW_S
   U -->|"HTTPS + httpOnly cookies"| CFA_S
-  U -. "HTTPS (once it exists)" .-> CFW_P
-  U -. "HTTPS (once it exists)" .-> CFA_P
+  U -->|HTTPS| CFW_P
+  U -->|"HTTPS + httpOnly cookies"| CFA_P
 
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
-  classDef pending fill:#e7f0e3,stroke:#6b9e6e,stroke-width:1.5px,color:#2e5230,stroke-dasharray: 4 3;
+  classDef prod fill:#e7f0e3,stroke:#6b9e6e,stroke-width:1.5px,color:#2e5230;
   class CFW_S,S3_S,CFA_S,ALB_S,ECS_S,RDS_S,CW_S live;
-  class CFW_P,S3_P,CFA_P,ALB_P,ECS_P,RDS_P pending;
+  class CFW_P,S3_P,CFA_P,ALB_P,ECS_P,RDS_P,CW_P prod;
       </pre>
-      <div class="caption">Fig. 1 — System view: browser → CloudFront (web/S3) and browser → CloudFront (api) → ALB → ECS Fargate → RDS. Staging (blue) is live; prod (dashed green) is the same Terraform module, just never applied.</div>
+      <div class="caption">Fig. 1 — System view: browser → CloudFront (web/S3) and browser → CloudFront (api) → ALB → ECS Fargate → RDS. Staging (blue) and prod (green) are both live; each env is an independent apply of the same Terraform module.</div>
     </div>
 
-    <div class="callout warn">
-      <div class="callout-title">⚠️ Warning — prod does not exist in AWS</div>
-      <p>The entire "PROD" block in this document describes what Terraform <em>would create</em> if run (<code>terraform/envs/prod</code>), with resource names analogous to staging's, swapping the suffix. There are no real prod URLs, ARNs, or costs today — confirmed in <code>docs/process/00-MASTER-PLAN.md</code> and <code>docs/process/06-staging-deploy.md</code> (no local <code>.terraform/</code> in <code>envs/prod</code>, no documented output).</p>
+    <div class="callout">
+      <div class="callout-title">✅ Production is deployed</div>
+      <p>First prod apply completed 2026-08-10 via published GitHub Releases (<code>turboai-notes-api</code> <code>v1.0.3</code>, then <code>turboai-notes-web</code>). State: <code>s3://turboai-notes-tfstate-615737882760/prod/terraform.tfstate</code>. Record: <code>docs/process/16-prod-deploy.md</code>.</p>
     </div>
 
     <h3>Real staging URLs (2026-08-07, still live)</h3>
@@ -334,6 +336,16 @@ flowchart TB
       <dt>API (CloudFront → ALB)</dt><dd><code>https://d1ukfp2c7u1v45.cloudfront.net</code></dd>
       <dt>Swagger / OpenAPI</dt><dd><code>/api/docs/</code> and <code>/api/schema/</code></dd>
       <dt>Health check</dt><dd><code>GET /api/health/</code> → <code>{"status": "ok"}</code></dd>
+    </div>
+
+    <h3>Real production URLs (2026-08-10)</h3>
+    <div class="kv">
+      <dt>Web (CloudFront)</dt><dd><code>https://doj4lx2n5ynh4.cloudfront.net</code></dd>
+      <dt>API (CloudFront → ALB)</dt><dd><code>https://djnxnkcoh52pi.cloudfront.net</code></dd>
+      <dt>Architecture page</dt><dd><code>https://doj4lx2n5ynh4.cloudfront.net/architecture/</code></dd>
+      <dt>Swagger / OpenAPI</dt><dd><code>/api/docs/</code> and <code>/api/schema/</code></dd>
+      <dt>Health check</dt><dd><code>GET /api/health/</code> → <code>{"status": "ok"}</code></dd>
+      <dt>Web bucket / CF id</dt><dd><code>turboai-notes-prod-web-615737882760</code> / <code>E2GYF210PBEKM</code></dd>
     </div>
 
     <h3>Product look and feel (visual reference)</h3>
@@ -364,12 +376,12 @@ flowchart LR
   CI1 -->|green| DEPS["Automatic deploy<br/>environment: staging"]
   DEV -->|"PR (1 approval required)"| MAIN["main"]
   MAIN -->|"gh release create (published)"| CI2["CI: lint + typecheck<br/>+ tests + 100% coverage"]
-  CI2 -->|green| DEPP["Deploy<br/>environment: prod 🚧 never exercised yet"]
+  CI2 -->|green| DEPP["Deploy<br/>environment: prod ✅"]
 
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
-  classDef pending fill:#e7f0e3,stroke:#6b9e6e,stroke-width:1.5px,color:#2e5230,stroke-dasharray: 4 3;
+  classDef prod fill:#e7f0e3,stroke:#6b9e6e,stroke-width:1.5px,color:#2e5230;
   class DEV,CI1,DEPS live;
-  class MAIN,CI2,DEPP pending;
+  class MAIN,CI2,DEPP prod;
       </pre>
       <div class="caption">Fig. 2 — Branching strategy (identical across both repositories): develop → automatic staging; main + published Release → prod.</div>
     </div>
@@ -446,7 +458,7 @@ sequenceDiagram
       <div class="caption">Fig. 3 — Each push/merge to <code>develop</code> triggers <strong>two</strong> independent deploy workflows (one per repository), both using the same OIDC role.</div>
     </div>
 
-    <h3>Sequence: publish a Release → prod deploy (never executed to date)</h3>
+    <h3>Sequence: publish a Release → prod deploy (exercised 2026-08-10)</h3>
     <div class="diagram-box">
       <pre class="mermaid">
 sequenceDiagram
@@ -462,10 +474,10 @@ sequenceDiagram
   DPL->>ENV: uses Environment "prod" — no required reviewer today
   DPL->>AWS: configure-aws-credentials (secrets.AWS_ROLE_ARN)
   DPL->>TF: terraform init / plan / apply (terraform/envs/prod)
-  Note over TF: 🚧 Never executed — prod resources<br/>do not exist in AWS yet
-  DPL-->>M: (once executed) prod URLs + smoke test
+  Note over TF: Applied — API https://djnxnkcoh52pi.cloudfront.net<br/>Web https://doj4lx2n5ynh4.cloudfront.net
+  DPL-->>M: Job summary + smoke health/docs
       </pre>
-      <div class="caption">Fig. 4 — Planned flow for prod. The workflow code already supports this path, but it has never actually been triggered.</div>
+      <div class="caption">Fig. 4 — Prod path: merge to <code>main</code> alone does <strong>not</strong> deploy; a published GitHub Release triggers Terraform apply + ECS/S3 ship.</div>
     </div>
 
     <div class="callout warn">
@@ -656,7 +668,7 @@ sequenceDiagram
       <tr><th>Environment</th><th><code>CORS_ALLOWED_ORIGINS</code> / <code>CSRF_TRUSTED_ORIGINS</code></th></tr>
       <tr><td>Local</td><td><code>http://localhost:3000</code> (+ <code>127.0.0.1:3000</code>)</td></tr>
       <tr><td>Staging</td><td><code>https://d1qdib1mcwro0s.cloudfront.net</code> — <strong>only</strong> that environment's web CloudFront origin</td></tr>
-      <tr><td>Prod (once it exists)</td><td>that stack's web CloudFront URL/domain — never staging's, never <code>*</code></td></tr>
+      <tr><td>Prod</td><td><code>https://doj4lx2n5ynh4.cloudfront.net</code> — <strong>only</strong> that environment's web CloudFront origin (not staging)</td></tr>
     </table>
     <p><code>CORS_ALLOW_CREDENTIALS = True</code> with <code>CORS_ALLOW_ALL_ORIGINS = False</code> — a required combination (credentials + wildcard is rejected by <code>django-cors-headers</code> itself). A guard function in <code>config/settings.py</code> (<code>_assert_deployed_origin_allowlist</code>) refuses to start with <code>ENVIRONMENT</code> set to staging/production if the allowlist is empty, contains a wildcard, or contains <code>localhost</code>.</p>
 
@@ -761,14 +773,14 @@ flowchart TD
   I --> J["10. Test on staging<br/>(real CloudFront URLs, e2e-notes skill,<br/>MCP db_query to inspect data)"]
   J --> K["11. PR develop → main (1 approval)"]
   K --> L["12. Publish GitHub Release from main"]
-  L --> M["13. deploy.yml triggers → prod environment<br/>🚧 path exists in code, never actually exercised"]
+  L --> M["13. deploy.yml triggers → prod environment<br/>✅ first exercised 2026-08-10"]
 
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
-  classDef pending fill:#e7f0e3,stroke:#6b9e6e,stroke-width:1.5px,color:#2e5230,stroke-dasharray: 4 3;
+  classDef prod fill:#e7f0e3,stroke:#6b9e6e,stroke-width:1.5px,color:#2e5230;
   class A,B,C,D,E,F,G,H,I,J,K live;
-  class L,M pending;
+  class L,M prod;
       </pre>
-      <div class="caption">Fig. 8 — Full lifecycle of a feature, from code to (potential) prod deploy.</div>
+      <div class="caption">Fig. 8 — Full lifecycle of a feature, from code to staging and (via Release) prod.</div>
     </div>
 
     <h3>Where each piece fits, in detail</h3>
@@ -787,7 +799,7 @@ flowchart TD
       <tr><td>Required PR checks</td><td><code>ci.yml</code> (lint + typecheck + tests + 100% coverage) — today it is <strong>not</strong> a required status check on GitHub, but it's team convention to run it and keep it green before requesting review</td></tr>
       <tr><td>Staging deploy</td><td>Automatic when merged into <code>develop</code> — no manual action</td></tr>
       <tr><td>Testing on staging</td><td>Real CloudFront URLs (section 1), the <code>e2e-notes</code> skill, or <code>db_query</code> via MCP to inspect the database</td></tr>
-      <tr><td>Prod deploy</td><td>PR <code>develop</code> → <code>main</code> (1 approval) → published <code>gh release create</code> → <code>deploy.yml</code> triggers automatically — <strong>this has never actually been executed</strong>, prod does not exist yet</td></tr>
+      <tr><td>Prod deploy</td><td>PR <code>develop</code> → <code>main</code> (1 approval) → published <code>gh release create</code> → <code>deploy.yml</code> (environment <code>prod</code>). Live: web <code>https://doj4lx2n5ynh4.cloudfront.net</code>, API <code>https://djnxnkcoh52pi.cloudfront.net</code> — see <code>docs/process/16-prod-deploy.md</code></td></tr>
     </table>
 
     <div class="callout">
