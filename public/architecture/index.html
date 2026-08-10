@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Turbo Notes — Arquitetura</title>
+<title>Turbo Notes — Architecture</title>
 <style>
   :root {
     --bg: #fdf5e6;
@@ -15,7 +15,7 @@
     --random: #e9a680;
     --school: #f3e3b5;
     --personal: #9ebab0;
-    /* Convenção de cor usada no documento inteiro: staging = azul, prod = verde. */
+    /* Color convention used throughout the document: staging = blue, prod = green. */
     --live: #4f7cac;
     --live-bg: #e3edf5;
     --pending: #6b9e6e;
@@ -237,55 +237,55 @@
 
 <header class="hero">
   <div class="wrap">
-    <h1>Turbo Notes — Documentação de Arquitetura</h1>
-    <p class="subtitle">Django/DRF (API) + Next.js (UI) · conta AWS <code>615737882760</code> · desenvolvido com Cursor (Grok 4.5 High Fast)</p>
+    <h1>Turbo Notes — Architecture Documentation</h1>
+    <p class="subtitle">Django/DRF (API) + Next.js (UI) · AWS account <code>615737882760</code> · built with Cursor (Grok 4.5 High Fast)</p>
     <div>
-      <span class="pill live">✅ Staging — ativo hoje</span>
-      <span class="pill pending">🚧 Prod — não implantado ainda</span>
-      <span class="pill">Cookie JWT + CSRF</span>
-      <span class="pill">ECS Fargate (não App Runner)</span>
-      <span class="pill">2 repositórios GitHub</span>
+      <span class="pill live">✅ Staging — live today</span>
+      <span class="pill pending">🚧 Prod — not deployed yet</span>
+      <span class="pill">JWT Cookie + CSRF</span>
+      <span class="pill">ECS Fargate (not App Runner)</span>
+      <span class="pill">2 GitHub repositories</span>
     </div>
-    <p style="font-size:.82rem; color:var(--muted); margin:.6rem 0 0;">Convenção de cor usada em todo o documento: <b style="color:var(--live)">■</b> staging (azul) · <b style="color:var(--pending)">■</b> prod (verde)</p>
+    <p style="font-size:.82rem; color:var(--muted); margin:.6rem 0 0;">Color convention used throughout the document: <b style="color:var(--live)">■</b> staging (blue) · <b style="color:var(--pending)">■</b> prod (green)</p>
   </div>
 </header>
 
 <div class="layout">
   <nav class="toc">
-    <h4>Sumário</h4>
+    <h4>Table of Contents</h4>
     <ol>
-      <li><a href="#visao-geral">Visão geral da arquitetura</a></li>
-      <li><a href="#repositorios">Repositórios GitHub</a></li>
+      <li><a href="#visao-geral">Architecture overview</a></li>
+      <li><a href="#repositorios">GitHub repositories</a></li>
       <li><a href="#cicd">GitHub Actions / CI-CD</a></li>
-      <li><a href="#aws">AWS — o que faz o quê</a></li>
-      <li><a href="#secrets">Variáveis de ambiente e secrets</a></li>
-      <li><a href="#autenticacao">Autenticação</a></li>
-      <li><a href="#mcp-skills">MCP e Skills</a></li>
-      <li><a href="#guia-feature">Como criar uma nova feature</a></li>
+      <li><a href="#aws">AWS — what does what</a></li>
+      <li><a href="#secrets">Environment variables and secrets</a></li>
+      <li><a href="#autenticacao">Authentication</a></li>
+      <li><a href="#mcp-skills">MCP and Skills</a></li>
+      <li><a href="#guia-feature">How to build a new feature</a></li>
       <li><a href="#docker">Docker &amp; Docker Compose</a></li>
     </ol>
-    <h4 style="margin-top:1.2rem;">Legenda</h4>
+    <h4 style="margin-top:1.2rem;">Legend</h4>
     <div class="legend" style="flex-direction:column; gap:.4rem;">
-      <div><span class="sw" style="background:var(--live)"></span>Implantado / ativo</div>
-      <div><span class="sw" style="background:var(--pending)"></span>Não implantado ainda</div>
+      <div><span class="sw" style="background:var(--live)"></span>Deployed / live</div>
+      <div><span class="sw" style="background:var(--pending)"></span>Not deployed yet</div>
     </div>
   </nav>
 
   <main>
 
   <section class="card anchor-offset" id="visao-geral">
-    <h2>1. Visão geral da arquitetura</h2>
-    <p class="lede">Duas aplicações independentes (front e back), cada uma no seu repositório GitHub, deployadas via Terraform para dois ambientes AWS isolados. <strong>Staging está no ar</strong>; <strong>prod existe apenas como código Terraform — nunca foi aplicado</strong>.</p>
+    <h2>1. Architecture overview</h2>
+    <p class="lede">Two independent applications (front and back), each in its own GitHub repository, deployed via Terraform to two isolated AWS environments. <strong>Staging is live</strong>; <strong>prod exists only as Terraform code — never applied</strong>.</p>
 
     <div class="diagram-box">
       <pre class="mermaid">
 flowchart TB
-  U["🌐 Usuário (navegador)"]
+  U["🌐 User (browser)"]
 
-  subgraph STG["STAGING — ativo hoje ✅"]
+  subgraph STG["STAGING — live today ✅"]
     direction TB
     CFW_S["CloudFront (web)<br/>d1qdib1mcwro0s.cloudfront.net"]
-    S3_S["S3 turboai-notes-staging-web-615737882760<br/>Next.js export estático"]
+    S3_S["S3 turboai-notes-staging-web-615737882760<br/>Next.js static export"]
     CFA_S["CloudFront (api)<br/>d1ukfp2c7u1v45.cloudfront.net"]
     ALB_S["ALB turboai-notes-staging-alb (HTTP :80)"]
     ECS_S["ECS Fargate — turboai-notes-staging<br/>container api :8000 (gunicorn/Django)"]
@@ -297,128 +297,128 @@ flowchart TB
     ECS_S -. logs .-> CW_S
   end
 
-  subgraph PRD["PROD — não implantado ainda 🚧 (mesmo módulo Terraform)"]
+  subgraph PRD["PROD — not deployed yet 🚧 (same Terraform module)"]
     direction TB
-    CFW_P["CloudFront (web) — a criar"]
-    S3_P["S3 turboai-notes-prod-web-... — a criar"]
-    CFA_P["CloudFront (api) — a criar"]
-    ALB_P["ALB turboai-notes-prod-alb — a criar"]
-    ECS_P["ECS Fargate — turboai-notes-prod — a criar"]
-    RDS_P[("RDS Postgres 16<br/>turboai-notes-prod-pg — a criar")]
+    CFW_P["CloudFront (web) — to be created"]
+    S3_P["S3 turboai-notes-prod-web-... — to be created"]
+    CFA_P["CloudFront (api) — to be created"]
+    ALB_P["ALB turboai-notes-prod-alb — to be created"]
+    ECS_P["ECS Fargate — turboai-notes-prod — to be created"]
+    RDS_P[("RDS Postgres 16<br/>turboai-notes-prod-pg — to be created")]
     CFW_P --> S3_P
     CFA_P --> ALB_P --> ECS_P
     ECS_P --> RDS_P
   end
 
   U -->|HTTPS| CFW_S
-  U -->|"HTTPS + cookies httpOnly"| CFA_S
-  U -. "HTTPS (quando existir)" .-> CFW_P
-  U -. "HTTPS (quando existir)" .-> CFA_P
+  U -->|"HTTPS + httpOnly cookies"| CFA_S
+  U -. "HTTPS (once it exists)" .-> CFW_P
+  U -. "HTTPS (once it exists)" .-> CFA_P
 
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
   classDef pending fill:#e7f0e3,stroke:#6b9e6e,stroke-width:1.5px,color:#2e5230,stroke-dasharray: 4 3;
   class CFW_S,S3_S,CFA_S,ALB_S,ECS_S,RDS_S,CW_S live;
   class CFW_P,S3_P,CFA_P,ALB_P,ECS_P,RDS_P pending;
       </pre>
-      <div class="caption">Fig. 1 — Visão de sistema: navegador → CloudFront (web/S3) e navegador → CloudFront (api) → ALB → ECS Fargate → RDS. Staging (azul) está no ar; prod (verde tracejado) é o mesmo módulo Terraform, só que nunca aplicado.</div>
+      <div class="caption">Fig. 1 — System view: browser → CloudFront (web/S3) and browser → CloudFront (api) → ALB → ECS Fargate → RDS. Staging (blue) is live; prod (dashed green) is the same Terraform module, just never applied.</div>
     </div>
 
     <div class="callout warn">
-      <div class="callout-title">⚠️ Atenção — prod não existe na AWS</div>
-      <p>Todo o bloco “PROD” deste documento descreve o que o Terraform <em>criaria</em> se rodado (<code>terraform/envs/prod</code>), com nomes de recursos análogos aos de staging trocando o sufixo. Não há URLs, ARNs ou custos reais de prod hoje — confirmado em <code>docs/process/00-MASTER-PLAN.md</code> e <code>docs/process/06-staging-deploy.md</code> (nenhum <code>.terraform/</code> local em <code>envs/prod</code>, nenhuma saída documentada).</p>
+      <div class="callout-title">⚠️ Warning — prod does not exist in AWS</div>
+      <p>The entire "PROD" block in this document describes what Terraform <em>would create</em> if run (<code>terraform/envs/prod</code>), with resource names analogous to staging's, swapping the suffix. There are no real prod URLs, ARNs, or costs today — confirmed in <code>docs/process/00-MASTER-PLAN.md</code> and <code>docs/process/06-staging-deploy.md</code> (no local <code>.terraform/</code> in <code>envs/prod</code>, no documented output).</p>
     </div>
 
-    <h3>URLs reais de staging (2026-08-07, ainda no ar)</h3>
+    <h3>Real staging URLs (2026-08-07, still live)</h3>
     <div class="kv">
       <dt>Web (CloudFront)</dt><dd><code>https://d1qdib1mcwro0s.cloudfront.net</code></dd>
       <dt>API (CloudFront → ALB)</dt><dd><code>https://d1ukfp2c7u1v45.cloudfront.net</code></dd>
-      <dt>Swagger / OpenAPI</dt><dd><code>/api/docs/</code> e <code>/api/schema/</code></dd>
+      <dt>Swagger / OpenAPI</dt><dd><code>/api/docs/</code> and <code>/api/schema/</code></dd>
       <dt>Health check</dt><dd><code>GET /api/health/</code> → <code>{"status": "ok"}</code></dd>
     </div>
 
-    <h3>Aparência do produto (referência visual)</h3>
+    <h3>Product look and feel (visual reference)</h3>
     <div class="shot-strip">
-      <figure><img src="images/screenshot-login.png" alt="Tela de login" loading="lazy"><figcaption>Login</figcaption></figure>
-      <figure><img src="images/screenshot-signup.png" alt="Tela de cadastro" loading="lazy"><figcaption>Cadastro</figcaption></figure>
-      <figure><img src="images/screenshot-home.png" alt="Home com notas" loading="lazy"><figcaption>Home (notas + categorias)</figcaption></figure>
-      <figure><img src="images/screenshot-editor.png" alt="Editor de nota" loading="lazy"><figcaption>Editor de nota</figcaption></figure>
+      <figure><img src="images/screenshot-login.png" alt="Login screen" loading="lazy"><figcaption>Login</figcaption></figure>
+      <figure><img src="images/screenshot-signup.png" alt="Sign-up screen" loading="lazy"><figcaption>Sign up</figcaption></figure>
+      <figure><img src="images/screenshot-home.png" alt="Home with notes" loading="lazy"><figcaption>Home (notes + categories)</figcaption></figure>
+      <figure><img src="images/screenshot-editor.png" alt="Note editor" loading="lazy"><figcaption>Note editor</figcaption></figure>
     </div>
-    <p>Paleta creme (<code>#FDF5E6</code>), tipografia serifada (Libre Baskerville) para títulos e Source Sans 3 no corpo, categorias coloridas: <span class="cat-dot" style="background:#E9A680"></span><strong>Random Thoughts</strong> <code>#E9A680</code>, <span class="cat-dot" style="background:#F3E3B5"></span><strong>School</strong> <code>#F3E3B5</code>, <span class="cat-dot" style="background:#9EBAB0"></span><strong>Personal</strong> <code>#9EBAB0</code> — definidas no backend (<code>apps/notes/services.py</code>) e espelhadas em <code>frontend/src/app/globals.css</code>.</p>
+    <p>Cream palette (<code>#FDF5E6</code>), serif typography (Libre Baskerville) for headings and Source Sans 3 for body text, colored categories: <span class="cat-dot" style="background:#E9A680"></span><strong>Random Thoughts</strong> <code>#E9A680</code>, <span class="cat-dot" style="background:#F3E3B5"></span><strong>School</strong> <code>#F3E3B5</code>, <span class="cat-dot" style="background:#9EBAB0"></span><strong>Personal</strong> <code>#9EBAB0</code> — defined in the backend (<code>apps/notes/services.py</code>) and mirrored in <code>frontend/src/app/globals.css</code>.</p>
   </section>
 
   <section class="card anchor-offset" id="repositorios">
-    <h2>2. Repositórios GitHub</h2>
-    <p class="lede">Dois repositórios públicos independentes na conta <code>jhgcc1</code>, cada um com seu próprio CI/CD, mas seguindo exatamente a mesma estratégia de branches.</p>
+    <h2>2. GitHub repositories</h2>
+    <p class="lede">Two independent public repositories under the <code>jhgcc1</code> account, each with its own CI/CD, but following exactly the same branching strategy.</p>
 
     <table>
-      <tr><th>Repositório</th><th>Conteúdo</th><th>Caminho local</th></tr>
-      <tr><td><code>jhgcc1/turboai-notes-api</code></td><td>Django/DRF, Terraform (<code>terraform/</code>), MCP AWS (<code>mcp/</code>)</td><td><code>/home/jhgcc1/turboai/backend</code></td></tr>
-      <tr><td><code>jhgcc1/turboai-notes-web</code></td><td>Next.js (App Router), export estático</td><td><code>/home/jhgcc1/turboai/frontend</code></td></tr>
+      <tr><th>Repository</th><th>Content</th><th>Local path</th></tr>
+      <tr><td><code>jhgcc1/turboai-notes-api</code></td><td>Django/DRF, Terraform (<code>terraform/</code>), AWS MCP (<code>mcp/</code>)</td><td><code>/home/jhgcc1/turboai/backend</code></td></tr>
+      <tr><td><code>jhgcc1/turboai-notes-web</code></td><td>Next.js (App Router), static export</td><td><code>/home/jhgcc1/turboai/frontend</code></td></tr>
     </table>
 
     <div class="diagram-box">
       <pre class="mermaid">
 flowchart LR
-  FB["branches de feature<br/>feature/*"] -->|"PR (1 aprovação exigida)"| DEV["develop"]
-  DEV -->|"push / merge"| CI1["CI: lint + typecheck<br/>+ testes + cobertura 100%"]
-  CI1 -->|verde| DEPS["Deploy automático<br/>ambiente: staging"]
-  DEV -->|"PR (1 aprovação exigida)"| MAIN["main"]
-  MAIN -->|"gh release create (published)"| CI2["CI: lint + typecheck<br/>+ testes + cobertura 100%"]
-  CI2 -->|verde| DEPP["Deploy<br/>ambiente: prod 🚧 não exercido ainda"]
+  FB["feature branches<br/>feature/*"] -->|"PR (1 approval required)"| DEV["develop"]
+  DEV -->|"push / merge"| CI1["CI: lint + typecheck<br/>+ tests + 100% coverage"]
+  CI1 -->|green| DEPS["Automatic deploy<br/>environment: staging"]
+  DEV -->|"PR (1 approval required)"| MAIN["main"]
+  MAIN -->|"gh release create (published)"| CI2["CI: lint + typecheck<br/>+ tests + 100% coverage"]
+  CI2 -->|green| DEPP["Deploy<br/>environment: prod 🚧 never exercised yet"]
 
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
   classDef pending fill:#e7f0e3,stroke:#6b9e6e,stroke-width:1.5px,color:#2e5230,stroke-dasharray: 4 3;
   class DEV,CI1,DEPS live;
   class MAIN,CI2,DEPP pending;
       </pre>
-      <div class="caption">Fig. 2 — Estratégia de branches (idêntica nos dois repositórios): develop → staging automático; main + Release publicada → prod.</div>
+      <div class="caption">Fig. 2 — Branching strategy (identical across both repositories): develop → automatic staging; main + published Release → prod.</div>
     </div>
 
-    <h3>Proteção de branch (estado real hoje, conferido via API do GitHub)</h3>
+    <h3>Branch protection (actual state today, verified via the GitHub API)</h3>
     <table class="tight">
-      <tr><th>Regra</th><th><code>main</code> (ambos os repos)</th><th><code>develop</code></th></tr>
-      <tr><td>Aprovações exigidas em PR</td><td>1</td><td>não protegida</td></tr>
-      <tr><td>Dispensa reviews obsoletos</td><td>sim</td><td>—</td></tr>
-      <tr><td>Exigir aprovação de code owner</td><td>não (não há <code>CODEOWNERS</code>)</td><td>—</td></tr>
-      <tr><td>Status checks obrigatórios (CI)</td><td><strong>não configurado</strong></td><td>—</td></tr>
-      <tr><td>Force-push / delete</td><td>bloqueado</td><td>permitido</td></tr>
+      <tr><th>Rule</th><th><code>main</code> (both repos)</th><th><code>develop</code></th></tr>
+      <tr><td>Required PR approvals</td><td>1</td><td>unprotected</td></tr>
+      <tr><td>Dismiss stale reviews</td><td>yes</td><td>—</td></tr>
+      <tr><td>Require code owner approval</td><td>no (no <code>CODEOWNERS</code>)</td><td>—</td></tr>
+      <tr><td>Required status checks (CI)</td><td><strong>not configured</strong></td><td>—</td></tr>
+      <tr><td>Force-push / delete</td><td>blocked</td><td>allowed</td></tr>
     </table>
     <div class="callout warn">
-      <div class="callout-title">⚠️ Atenção — gap entre plano e realidade</div>
-      <p><code>docs/process/00-MASTER-PLAN.md</code> lista “branch protection on <code>main</code>” como pendência. Hoje existe <strong>1 aprovação obrigatória</strong> em <code>main</code> nos dois repos, mas o <strong>CI não é um status check obrigatório</strong> — ou seja, tecnicamente um PR pode ser mergeado em <code>main</code> mesmo com o workflow <code>CI</code> vermelho, desde que tenha 1 aprovação. Os GitHub Environments <code>staging</code>/<code>prod</code> também não têm <code>protection_rules</code> (sem revisor obrigatório antes de aplicar em prod).</p>
+      <div class="callout-title">⚠️ Warning — gap between plan and reality</div>
+      <p><code>docs/process/00-MASTER-PLAN.md</code> lists "branch protection on <code>main</code>" as a pending item. Today there is <strong>1 required approval</strong> on <code>main</code> in both repos, but <strong>CI is not a required status check</strong> — meaning a PR can technically be merged into <code>main</code> even with a red <code>CI</code> workflow, as long as it has 1 approval. The GitHub Environments <code>staging</code>/<code>prod</code> also have no <code>protection_rules</code> (no required reviewer before applying to prod).</p>
     </div>
   </section>
 
   <section class="card anchor-offset" id="cicd">
     <h2>3. GitHub Actions / CI-CD</h2>
-    <p class="lede">Cada repositório tem exatamente três workflows: <code>ci.yml</code>, <code>deploy.yml</code> e <code>ai-review.yml</code>. Nenhum outro workflow existe hoje.</p>
+    <p class="lede">Each repository has exactly three workflows: <code>ci.yml</code>, <code>deploy.yml</code>, and <code>ai-review.yml</code>. No other workflow exists today.</p>
 
     <div class="grid-2">
       <div>
         <h3>turboai-notes-api</h3>
         <table class="tight">
-          <tr><th>Workflow</th><th>Gatilho</th><th>O que faz</th></tr>
-          <tr><td><code>ci.yml</code></td><td><code>pull_request</code>, <code>push</code> em <code>main</code>/<code>develop</code>, <code>workflow_call</code></td><td>Python 3.12 → <code>ruff format --check</code>, <code>ruff check</code>, <code>mypy</code> (<strong>não bloqueia</strong>, roda com <code>|| true</code>), <code>pytest</code> (cobertura 100% em <code>apps/</code>)</td></tr>
-          <tr><td><code>deploy.yml</code></td><td><code>push:develop</code> → staging; <code>release:published</code> → prod; <code>workflow_dispatch</code></td><td>OIDC → ECR push (imagem <code>:sha</code> e <code>:latest</code>) → <code>terraform init/plan/apply</code> em <code>terraform/envs/{staging|prod}</code> → <code>ecs update-service --force-new-deployment</code> → smoke test em <code>/api/health/</code> e <code>/api/docs/</code></td></tr>
-          <tr><td><code>ai-review.yml</code></td><td><code>pull_request</code> (opened/synchronize/reopened)</td><td>Comentário heurístico via regex no diff (não é LLM): detecta <code>SECRET_KEY</code> hardcoded, <code>localStorage</code> com token, senha sem <code>validate_password</code>, <code>eval(</code>)</td></tr>
+          <tr><th>Workflow</th><th>Trigger</th><th>What it does</th></tr>
+          <tr><td><code>ci.yml</code></td><td><code>pull_request</code>, <code>push</code> on <code>main</code>/<code>develop</code>, <code>workflow_call</code></td><td>Python 3.12 → <code>ruff format --check</code>, <code>ruff check</code>, <code>mypy</code> (<strong>non-blocking</strong>, runs with <code>|| true</code>), <code>pytest</code> (100% coverage on <code>apps/</code>)</td></tr>
+          <tr><td><code>deploy.yml</code></td><td><code>push:develop</code> → staging; <code>release:published</code> → prod; <code>workflow_dispatch</code></td><td>OIDC → ECR push (image <code>:sha</code> and <code>:latest</code>) → <code>terraform init/plan/apply</code> in <code>terraform/envs/{staging|prod}</code> → <code>ecs update-service --force-new-deployment</code> → smoke test on <code>/api/health/</code> and <code>/api/docs/</code></td></tr>
+          <tr><td><code>ai-review.yml</code></td><td><code>pull_request</code> (opened/synchronize/reopened)</td><td>Heuristic regex-based comment on the diff (not an LLM): detects hardcoded <code>SECRET_KEY</code>, <code>localStorage</code> with a token, password without <code>validate_password</code>, <code>eval(</code>)</td></tr>
         </table>
       </div>
       <div>
         <h3>turboai-notes-web</h3>
         <table class="tight">
-          <tr><th>Workflow</th><th>Gatilho</th><th>O que faz</th></tr>
-          <tr><td><code>ci.yml</code></td><td>igual à API</td><td>Node 20 → <code>prettier --check</code>, <code>eslint</code>, <code>tsc --noEmit</code>, <code>vitest run --coverage</code> (cobertura 100% em <code>src/</code>, exceto <code>layout.tsx</code>)</td></tr>
-          <tr><td><code>deploy.yml</code></td><td>igual à API</td><td>OIDC → <strong>não roda Terraform</strong> (consome secrets já preenchidos a partir das saídas do Terraform da API) → <code>next build</code> com <code>NEXT_PUBLIC_API_URL</code> de build → <code>aws s3 sync out/</code> → <code>cloudfront create-invalidation "/*"</code> → smoke <code>curl</code> no WEB_URL</td></tr>
-          <tr><td><code>ai-review.yml</code></td><td>igual à API</td><td>Heurística regex: <code>localStorage</code> + token, <code>NEXT_PUBLIC_*SECRET/PASSWORD</code>, lógica de auth/ownership vazando pro front</td></tr>
+          <tr><th>Workflow</th><th>Trigger</th><th>What it does</th></tr>
+          <tr><td><code>ci.yml</code></td><td>same as API</td><td>Node 20 → <code>prettier --check</code>, <code>eslint</code>, <code>tsc --noEmit</code>, <code>vitest run --coverage</code> (100% coverage on <code>src/</code>, except <code>layout.tsx</code>)</td></tr>
+          <tr><td><code>deploy.yml</code></td><td>same as API</td><td>OIDC → <strong>does not run Terraform</strong> (consumes secrets already filled in from the API's Terraform outputs) → <code>next build</code> with build-time <code>NEXT_PUBLIC_API_URL</code> → <code>aws s3 sync out/</code> → <code>cloudfront create-invalidation "/*"</code> → smoke <code>curl</code> against WEB_URL</td></tr>
+          <tr><td><code>ai-review.yml</code></td><td>same as API</td><td>Regex heuristic: <code>localStorage</code> + token, <code>NEXT_PUBLIC_*SECRET/PASSWORD</code>, auth/ownership logic leaking into the frontend</td></tr>
         </table>
       </div>
     </div>
 
-    <h3>Sequência: push em <code>develop</code> → deploy automático em staging</h3>
+    <h3>Sequence: push to <code>develop</code> → automatic staging deploy</h3>
     <div class="diagram-box">
       <pre class="mermaid">
 sequenceDiagram
-  actor Dev as Desenvolvedor(a)
+  actor Dev as Developer
   participant GH as GitHub (develop)
   participant CI as ci.yml (quality)
   participant DPL as deploy.yml
@@ -428,372 +428,372 @@ sequenceDiagram
   participant ECS as ECS Fargate
   participant S3 as S3 + CloudFront (web)
 
-  Dev->>GH: git push / merge PR para develop
-  GH->>DPL: dispara deploy.yml (push:develop)
-  DPL->>CI: needs: ci (reusa ci.yml via workflow_call)
-  CI-->>DPL: lint / typecheck / testes / cobertura OK
+  Dev->>GH: git push / merge PR into develop
+  GH->>DPL: triggers deploy.yml (push:develop)
+  DPL->>CI: needs: ci (reuses ci.yml via workflow_call)
+  CI-->>DPL: lint / typecheck / tests / coverage OK
   DPL->>AWS: configure-aws-credentials (secrets.AWS_ROLE_ARN, OIDC)
-  Note over DPL,ECR: repositório turboai-notes-api
-  DPL->>ECR: docker build + push imagem :sha e :latest
+  Note over DPL,ECR: turboai-notes-api repository
+  DPL->>ECR: docker build + push image :sha and :latest
   DPL->>TF: terraform init / plan / apply (terraform/envs/staging)
   DPL->>ECS: update-service --force-new-deployment + wait services-stable
-  DPL->>DPL: smoke test GET /api/health/ e /api/docs/
-  Note over DPL,S3: repositório turboai-notes-web (workflow paralelo, independente)
+  DPL->>DPL: smoke test GET /api/health/ and /api/docs/
+  Note over DPL,S3: turboai-notes-web repository (parallel, independent workflow)
   DPL->>S3: next build (NEXT_PUBLIC_API_URL=secrets.API_URL) + s3 sync out/
   DPL->>S3: cloudfront create-invalidation --paths "/*"
-  DPL->>DPL: smoke test curl no WEB_URL
+  DPL->>DPL: smoke test curl against WEB_URL
       </pre>
-      <div class="caption">Fig. 3 — Cada push/merge em <code>develop</code> dispara <strong>dois</strong> workflows de deploy independentes (um por repositório), ambos usando a mesma role OIDC.</div>
+      <div class="caption">Fig. 3 — Each push/merge to <code>develop</code> triggers <strong>two</strong> independent deploy workflows (one per repository), both using the same OIDC role.</div>
     </div>
 
-    <h3>Sequência: publicar Release → deploy em prod (nunca executado até hoje)</h3>
+    <h3>Sequence: publish a Release → prod deploy (never executed to date)</h3>
     <div class="diagram-box">
       <pre class="mermaid">
 sequenceDiagram
-  actor M as Mantenedor(a)
+  actor M as Maintainer
   participant GH as GitHub
   participant DPL as deploy.yml
   participant ENV as Environment "prod"
   participant AWS as AWS (OIDC)
   participant TF as Terraform (envs/prod)
 
-  M->>GH: Publicar GitHub Release (a partir de main)
-  GH->>DPL: dispara deploy.yml (release: published)
-  DPL->>ENV: usa Environment "prod" — sem revisor obrigatório hoje
+  M->>GH: Publish GitHub Release (from main)
+  GH->>DPL: triggers deploy.yml (release: published)
+  DPL->>ENV: uses Environment "prod" — no required reviewer today
   DPL->>AWS: configure-aws-credentials (secrets.AWS_ROLE_ARN)
   DPL->>TF: terraform init / plan / apply (terraform/envs/prod)
-  Note over TF: 🚧 Nunca executado — recursos de prod<br/>ainda não existem na AWS
-  DPL-->>M: (quando executado) URLs de prod + smoke test
+  Note over TF: 🚧 Never executed — prod resources<br/>do not exist in AWS yet
+  DPL-->>M: (once executed) prod URLs + smoke test
       </pre>
-      <div class="caption">Fig. 4 — Fluxo previsto para prod. O código do workflow já suporta esse caminho, mas ele nunca foi disparado de fato.</div>
+      <div class="caption">Fig. 4 — Planned flow for prod. The workflow code already supports this path, but it has never actually been triggered.</div>
     </div>
 
     <div class="callout warn">
-      <div class="callout-title">⚠️ Atenção — inconsistência real entre os dois <code>deploy.yml</code></div>
-      <p>O <code>deploy.yml</code> da API fixa <code>AWS_REGION: us-east-2</code> direto no YAML (ignora qualquer secret). Já o do frontend usa <code>AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}</code> — se o secret <code>AWS_REGION</code> não estiver setado no repo web, ele cairia em <code>us-east-1</code>, região errada. Hoje o secret está configurado corretamente nos dois repos, mas essa é uma divergência de código real, não hipotética.</p>
+      <div class="callout-title">⚠️ Warning — real inconsistency between the two <code>deploy.yml</code> files</div>
+      <p>The API's <code>deploy.yml</code> hardcodes <code>AWS_REGION: us-east-2</code> directly in the YAML (ignores any secret). The frontend's, however, uses <code>AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}</code> — if the <code>AWS_REGION</code> secret isn't set in the web repo, it would fall back to <code>us-east-1</code>, the wrong region. Today the secret is correctly configured in both repos, but this is a real code divergence, not a hypothetical one.</p>
     </div>
     <div class="callout">
-      <div class="callout-title">ℹ️ ai-review.yml não é IA de verdade (ainda)</div>
-      <p>Apesar do nome “AI PR Review”, o workflow hoje só roda expressões regulares (<code>eval(</code>, <code>localStorage</code>+token, chave hardcoded etc.) via <code>actions/github-script</code>. O comentário do bot menciona configurar <code>OPENAI_API_KEY</code> “mais tarde” — não há chamada de LLM implementada nem esse secret configurado.</p>
+      <div class="callout-title">ℹ️ ai-review.yml is not real AI (yet)</div>
+      <p>Despite the name "AI PR Review", the workflow today only runs regular expressions (<code>eval(</code>, <code>localStorage</code>+token, hardcoded key, etc.) via <code>actions/github-script</code>. The bot's comment mentions configuring <code>OPENAI_API_KEY</code> "later" — no LLM call is implemented and that secret is not configured.</p>
     </div>
   </section>
 
   <section class="card anchor-offset" id="aws">
-    <h2>4. AWS — que partes fazem o quê</h2>
-    <p class="lede">Todo o Terraform vive em <code>backend/terraform/</code> (um único módulo <code>modules/stack</code>, reaplicado por <code>envs/staging</code> e <code>envs/prod</code>). Estado remoto em S3 (<code>turboai-notes-tfstate-615737882760</code>) com lock em DynamoDB (<code>turboai-notes-tflock</code>), região <code>us-east-2</code>.</p>
+    <h2>4. AWS — which parts do what</h2>
+    <p class="lede">All Terraform lives in <code>backend/terraform/</code> (a single <code>modules/stack</code> module, reapplied by <code>envs/staging</code> and <code>envs/prod</code>). Remote state in S3 (<code>turboai-notes-tfstate-615737882760</code>) with a DynamoDB lock (<code>turboai-notes-tflock</code>), region <code>us-east-2</code>.</p>
 
     <div class="diagram-box">
       <pre class="mermaid">
 flowchart TB
   subgraph VPC["VPC turboai-notes-staging-vpc — 10.0.0.0/16"]
-    subgraph PUB["Subnets públicas (2 AZs)"]
+    subgraph PUB["Public subnets (2 AZs)"]
       ALB["ALB<br/>turboai-notes-staging-alb"]
       ECS["ECS Fargate task<br/>assign_public_ip=true<br/>SG turboai-notes-staging-ecs"]
       BAST["EC2 Bastion — t4g.micro<br/>SG turboai-notes-staging-bastion<br/>SSH :22 (0.0.0.0/0)"]
     end
-    subgraph PRIV["Subnets privadas (2 AZs)"]
+    subgraph PRIV["Private subnets (2 AZs)"]
       RDS[("RDS Postgres 16<br/>db.t4g.micro<br/>SG turboai-notes-staging-db")]
     end
   end
 
   CFAPI["CloudFront (api)"] -->|"HTTP :80"| ALB --> ECS
   ECS -->|":5432"| RDS
-  BAST -->|"túnel SSH local → :5432"| RDS
-  ECR["ECR turboai-notes-staging"] -. imagem docker .-> ECS
-  ECS -. logs .-> CW["CloudWatch Logs<br/>/turboai/notes/staging/api (7 dias)"]
-  CW -. métrica 5xx .-> ALARM["Alarme turboai-notes-staging-5xx<br/>HTTPCode_Target_5XX_Count > 50 / 5min"]
+  BAST -->|"local SSH tunnel → :5432"| RDS
+  ECR["ECR turboai-notes-staging"] -. docker image .-> ECS
+  ECS -. logs .-> CW["CloudWatch Logs<br/>/turboai/notes/staging/api (7 days)"]
+  CW -. 5xx metric .-> ALARM["Alarm turboai-notes-staging-5xx<br/>HTTPCode_Target_5XX_Count > 50 / 5min"]
 
-  ROLE_EXEC["IAM Role: ecs-exec<br/>AmazonECSTaskExecutionRolePolicy<br/>+ secretsmanager:GetSecretValue"] -. usada por .-> ECS
-  ROLE_TASK["IAM Role: ecs-task<br/>logs:PutLogEvents/CreateLogStream"] -. usada por .-> ECS
-  SM["Secrets Manager<br/>turboai-notes-staging-django-secret-key<br/>turboai-notes-staging-db-password"] -. resolvido no start via ecs-exec .-> ECS
+  ROLE_EXEC["IAM Role: ecs-exec<br/>AmazonECSTaskExecutionRolePolicy<br/>+ secretsmanager:GetSecretValue"] -. used by .-> ECS
+  ROLE_TASK["IAM Role: ecs-task<br/>logs:PutLogEvents/CreateLogStream"] -. used by .-> ECS
+  SM["Secrets Manager<br/>turboai-notes-staging-django-secret-key<br/>turboai-notes-staging-db-password"] -. resolved at startup via ecs-exec .-> ECS
 
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
   class ALB,ECS,BAST,RDS,ECR,CW,ALARM,ROLE_EXEC,ROLE_TASK,SM live;
       </pre>
-      <div class="caption">Fig. 5 — Mapa de recursos AWS de <strong>staging</strong> (o único ambiente aplicado). Prod usaria o mesmo módulo com CIDR <code>10.1.0.0/16</code>, backup de 7 dias (vs 1), <code>deletion_protection=true</code>, retenção de logs de 14 dias (vs 7) e nomes com sufixo <code>-prod</code> — nada disso existe na AWS hoje.</div>
+      <div class="caption">Fig. 5 — AWS resource map for <strong>staging</strong> (the only applied environment). Prod would use the same module with CIDR <code>10.1.0.0/16</code>, 7-day backups (vs 1), <code>deletion_protection=true</code>, 14-day log retention (vs 7), and names with a <code>-prod</code> suffix — none of this exists in AWS today.</div>
     </div>
 
-    <h3>Inventário de recursos por categoria</h3>
+    <h3>Resource inventory by category</h3>
     <table>
-      <tr><th>Categoria</th><th>Recursos (Terraform)</th><th>Detalhe</th></tr>
-      <tr><td><strong>Rede</strong></td><td><code>aws_vpc</code>, <code>aws_internet_gateway</code>, 2 subnets públicas + 2 privadas, <code>aws_route_table</code> (pública → IGW)</td><td>Sem NAT Gateway — não há recurso <code>aws_nat_gateway</code>; tarefas ECS rodam em subnet pública com IP público próprio</td></tr>
-      <tr><td><strong>Segurança de rede</strong></td><td>4 Security Groups: <code>alb</code> (80 de 0.0.0.0/0), <code>ecs_tasks</code> (8000 só do ALB), <code>db</code> (5432 de ECS+bastion), <code>bastion</code> (22 de 0.0.0.0/0)</td><td>SSH do bastion aberto ao mundo — comentado no próprio Terraform como algo a restringir em operação real</td></tr>
-      <tr><td><strong>Compute (API)</strong></td><td><code>aws_ecr_repository</code>, <code>aws_ecs_cluster</code>, <code>aws_ecs_task_definition</code> (Fargate, 256 CPU / 512 MB), <code>aws_ecs_service</code> (desired_count=1)</td><td><strong>ECS Fargate, não App Runner</strong> — comentário no código: “App Runner is closed to new customers (2026-04-30)”. Menções a App Runner em <code>docs/costs/estimated-cost.md</code> estão desatualizadas.</td></tr>
-      <tr><td><strong>Load balancing</strong></td><td><code>aws_lb</code> (ALB, internet-facing, apenas <code>listener</code> HTTP :80), <code>aws_lb_target_group</code> (health check <code>/api/health/</code>)</td><td>Sem HTTPS no ALB — TLS termina no CloudFront; CloudFront→ALB é HTTP puro (<code>origin_protocol_policy = "http-only"</code>)</td></tr>
-      <tr><td><strong>CDN (API)</strong></td><td><code>aws_cloudfront_distribution.api</code></td><td>Certificado padrão do CloudFront (sem domínio customizado); cache desabilitado (<code>Managed-CachingDisabled</code>)</td></tr>
-      <tr><td><strong>Frontend estático</strong></td><td><code>aws_s3_bucket.web</code> (privado, OAC), <code>aws_cloudfront_distribution.web</code>, <code>aws_cloudfront_function.web_spa_rewrite</code></td><td>Função CloudFront reescreve <code>/rota/</code> → <code>/rota/index.html</code> para compatibilizar com <code>next build -o export</code>; erros 403/404 do S3 viram 200 servindo <code>index.html</code></td></tr>
-      <tr><td><strong>Banco de dados</strong></td><td><code>aws_db_instance.postgres</code> — Postgres 16, <code>db.t4g.micro</code>, 20→50GB, subnet privada, <code>publicly_accessible=false</code></td><td>Backup 1 dia (staging) / 7 dias (prod); <code>deletion_protection</code> só em prod</td></tr>
-      <tr><td><strong>IAM</strong></td><td>Role <code>ecs-exec</code> (puxa imagem + resolve <code>secrets:</code>), Role <code>ecs-task</code> (só grava logs), Role bastion (SSM Core)</td><td>Deploy role <code>turboai-notes-github-actions</code> (OIDC) é criada <em>fora</em> do Terraform, por script (<code>scripts/bootstrap-aws-github-oidc.sh</code>)</td></tr>
-      <tr><td><strong>CloudWatch</strong></td><td>Log group <code>/turboai/notes/{env}/api</code>, alarme <code>{env}-5xx</code></td><td>Sem dashboard nem ação de alarme (SNS) configurada</td></tr>
-      <tr><td><strong>Bastion</strong></td><td><code>aws_instance.bastion</code> — <code>t4g.micro</code>, Amazon Linux 2023 ARM64, IMDSv2 obrigatório</td><td>Usado exclusivamente para o túnel SSH do MCP (seção 7); também acessível via SSM Session Manager</td></tr>
+      <tr><th>Category</th><th>Resources (Terraform)</th><th>Detail</th></tr>
+      <tr><td><strong>Networking</strong></td><td><code>aws_vpc</code>, <code>aws_internet_gateway</code>, 2 public subnets + 2 private, <code>aws_route_table</code> (public → IGW)</td><td>No NAT Gateway — there is no <code>aws_nat_gateway</code> resource; ECS tasks run in a public subnet with their own public IP</td></tr>
+      <tr><td><strong>Network security</strong></td><td>4 Security Groups: <code>alb</code> (80 from 0.0.0.0/0), <code>ecs_tasks</code> (8000 only from the ALB), <code>db</code> (5432 from ECS+bastion), <code>bastion</code> (22 from 0.0.0.0/0)</td><td>Bastion SSH open to the world — flagged in the Terraform code itself as something to restrict in a real production setup</td></tr>
+      <tr><td><strong>Compute (API)</strong></td><td><code>aws_ecr_repository</code>, <code>aws_ecs_cluster</code>, <code>aws_ecs_task_definition</code> (Fargate, 256 CPU / 512 MB), <code>aws_ecs_service</code> (desired_count=1)</td><td><strong>ECS Fargate, not App Runner</strong> — comment in the code: "App Runner is closed to new customers (2026-04-30)". Mentions of App Runner in <code>docs/costs/estimated-cost.md</code> are outdated.</td></tr>
+      <tr><td><strong>Load balancing</strong></td><td><code>aws_lb</code> (ALB, internet-facing, only an HTTP :80 <code>listener</code>), <code>aws_lb_target_group</code> (health check <code>/api/health/</code>)</td><td>No HTTPS on the ALB — TLS terminates at CloudFront; CloudFront→ALB is plain HTTP (<code>origin_protocol_policy = "http-only"</code>)</td></tr>
+      <tr><td><strong>CDN (API)</strong></td><td><code>aws_cloudfront_distribution.api</code></td><td>Default CloudFront certificate (no custom domain); caching disabled (<code>Managed-CachingDisabled</code>)</td></tr>
+      <tr><td><strong>Static frontend</strong></td><td><code>aws_s3_bucket.web</code> (private, OAC), <code>aws_cloudfront_distribution.web</code>, <code>aws_cloudfront_function.web_spa_rewrite</code></td><td>CloudFront function rewrites <code>/route/</code> → <code>/route/index.html</code> to match <code>next build -o export</code>; S3 403/404 errors are turned into 200 responses serving <code>index.html</code></td></tr>
+      <tr><td><strong>Database</strong></td><td><code>aws_db_instance.postgres</code> — Postgres 16, <code>db.t4g.micro</code>, 20→50GB, private subnet, <code>publicly_accessible=false</code></td><td>1-day backup (staging) / 7-day (prod); <code>deletion_protection</code> only in prod</td></tr>
+      <tr><td><strong>IAM</strong></td><td>Role <code>ecs-exec</code> (pulls the image + resolves <code>secrets:</code>), Role <code>ecs-task</code> (writes logs only), Bastion role (SSM Core)</td><td>The <code>turboai-notes-github-actions</code> deploy role (OIDC) is created <em>outside</em> Terraform, via a script (<code>scripts/bootstrap-aws-github-oidc.sh</code>)</td></tr>
+      <tr><td><strong>CloudWatch</strong></td><td>Log group <code>/turboai/notes/{env}/api</code>, alarm <code>{env}-5xx</code></td><td>No dashboard or alarm action (SNS) configured</td></tr>
+      <tr><td><strong>Bastion</strong></td><td><code>aws_instance.bastion</code> — <code>t4g.micro</code>, Amazon Linux 2023 ARM64, IMDSv2 required</td><td>Used exclusively for the MCP SSH tunnel (section 7); also reachable via SSM Session Manager</td></tr>
     </table>
 
-    <h3>IAM — GitHub OIDC deploy role (fora do Terraform)</h3>
+    <h3>IAM — GitHub OIDC deploy role (outside Terraform)</h3>
     <div class="kv">
-      <dt>Provider OIDC</dt><dd><code>arn:aws:iam::615737882760:oidc-provider/token.actions.githubusercontent.com</code></dd>
-      <dt>Role de deploy</dt><dd><code>turboai-notes-github-actions</code> — assumida via <code>sts:AssumeRoleWithWebIdentity</code></dd>
-      <dt><code>sub</code> permitido</dt><dd><code>repo:jhgcc1/turboai-notes-api:*</code> e <code>repo:jhgcc1/turboai-notes-web:*</code></dd>
-      <dt>Permissões</dt><dd>Amplas (<code>Resource:"*"</code>) em ECR/ECS/RDS/EC2/S3/CloudFront/Logs/ELB; Secrets Manager restrito a <code>arn:...:secret:turboai-notes-*</code></dd>
+      <dt>OIDC provider</dt><dd><code>arn:aws:iam::615737882760:oidc-provider/token.actions.githubusercontent.com</code></dd>
+      <dt>Deploy role</dt><dd><code>turboai-notes-github-actions</code> — assumed via <code>sts:AssumeRoleWithWebIdentity</code></dd>
+      <dt>Allowed <code>sub</code></dt><dd><code>repo:jhgcc1/turboai-notes-api:*</code> and <code>repo:jhgcc1/turboai-notes-web:*</code></dd>
+      <dt>Permissions</dt><dd>Broad (<code>Resource:"*"</code>) across ECR/ECS/RDS/EC2/S3/CloudFront/Logs/ELB; Secrets Manager restricted to <code>arn:...:secret:turboai-notes-*</code></dd>
     </div>
     <div class="callout warn">
-      <div class="callout-title">⚠️ Atenção — achado do security audit ainda aberto</div>
-      <p><code>docs/process/07-security-audit.md</code> recomenda reduzir o escopo <code>Resource:"*"</code> da role de deploy para os ARNs específicos que o Terraform gerencia. Isso está listado como <strong>recomendação pendente</strong>, não como algo já corrigido.</p>
+      <div class="callout-title">⚠️ Warning — security audit finding still open</div>
+      <p><code>docs/process/07-security-audit.md</code> recommends narrowing the deploy role's <code>Resource:"*"</code> scope down to the specific ARNs that Terraform manages. This is listed as a <strong>pending recommendation</strong>, not something already fixed.</p>
     </div>
   </section>
 
   <section class="card anchor-offset" id="secrets">
-    <h2>5. Variáveis de ambiente e secrets — onde cada uma mora</h2>
-    <p class="lede">Existem <strong>quatro</strong> lugares onde configuração/segredos vivem, cada um com um propósito diferente. A tabela abaixo foi conferida diretamente contra <code>terraform/modules/stack/main.tf</code>, os workflows <code>deploy.yml</code> e <code>docs/process/04-github-secrets.md</code> / <code>07-security-audit.md</code>.</p>
+    <h2>5. Environment variables and secrets — where each one lives</h2>
+    <p class="lede">There are <strong>four</strong> places where configuration/secrets live, each with a different purpose. The table below was verified directly against <code>terraform/modules/stack/main.tf</code>, the <code>deploy.yml</code> workflows, and <code>docs/process/04-github-secrets.md</code> / <code>07-security-audit.md</code>.</p>
 
     <div class="legend">
-      <div><span class="badge gh">GitHub Secrets</span> só usados pelo CI/CD, nunca chegam ao runtime do container</div>
-      <div><span class="badge sm">AWS Secrets Manager</span> segredo real da aplicação, resolvido pelo ECS no start</div>
-      <div><span class="badge env">Env var ECS (texto puro)</span> configuração não sensível na task definition</div>
-      <div><span class="badge local">Local (.env)</span> só na máquina do desenvolvedor</div>
+      <div><span class="badge gh">GitHub Secrets</span> used only by CI/CD, never reach the container runtime</div>
+      <div><span class="badge sm">AWS Secrets Manager</span> the app's real secret, resolved by ECS at startup</div>
+      <div><span class="badge env">ECS env var (plain text)</span> non-sensitive configuration in the task definition</div>
+      <div><span class="badge local">Local (.env)</span> only on the developer's machine</div>
     </div>
 
     <table class="tight">
-      <tr><th>Nome</th><th>Onde mora</th><th>Como chega ao app</th></tr>
-      <tr><td><code>AWS_ROLE_ARN</code></td><td><span class="badge gh">GitHub Secrets</span> (repo + Environments <code>staging</code>/<code>prod</code>, os 2 repos)</td><td>Só em CI/CD: <code>aws-actions/configure-aws-credentials</code> assume a role via OIDC. Nunca vira variável do app.</td></tr>
-      <tr><td><code>DB_PASSWORD</code></td><td><span class="badge gh">GitHub Secrets</span> (repo api)</td><td><code>TF_VAR_db_password</code> → senha master do RDS (<code>aws_db_instance.password</code>) <strong>e</strong> gravada em <span class="badge sm">Secrets Manager</span> <code>turboai-notes-staging-db-password</code> → lida pelo ECS via bloco <code>secrets:</code> como <code>POSTGRES_PASSWORD</code>.</td></tr>
-      <tr><td><code>DJANGO_SECRET_KEY</code></td><td><span class="badge gh">GitHub Secrets</span> (repo api)</td><td><code>TF_VAR_django_secret_key</code> → <span class="badge sm">Secrets Manager</span> <code>turboai-notes-staging-django-secret-key</code> → ECS <code>secrets:</code> → env <code>SECRET_KEY</code> dentro do container.</td></tr>
-      <tr><td><code>AWS_REGION</code></td><td><span class="badge gh">GitHub Secrets</span> (ambos repos)</td><td>⚠️ API <strong>ignora</strong> esse secret (hardcoded <code>us-east-2</code> no <code>deploy.yml</code>); web lê <code>secrets.AWS_REGION</code> com fallback <code>us-east-1</code>.</td></tr>
-      <tr><td><code>API_URL</code>, <code>WEB_URL</code></td><td><span class="badge gh">GitHub Secrets</span> (repo, ambos)</td><td>Preenchidos manualmente após o primeiro <code>terraform apply</code> de staging; usados em smoke tests e como <code>NEXT_PUBLIC_API_URL</code> no build do front.</td></tr>
-      <tr><td><code>WEB_BUCKET</code>, <code>CLOUDFRONT_ID</code></td><td><span class="badge gh">GitHub Secrets</span> (repo web)</td><td>Usados só no <code>deploy.yml</code> do frontend: <code>aws s3 sync</code> e <code>cloudfront create-invalidation</code>.</td></tr>
-      <tr><td><code>SECRET_KEY</code> (runtime)</td><td><span class="badge sm">AWS Secrets Manager</span> <code>turboai-notes-{env}-django-secret-key</code></td><td>Bloco <code>secrets:</code> da task definition (<code>valueFrom</code> = ARN) — <strong>nunca aparece em texto puro</strong> na task definition nem no console ECS.</td></tr>
-      <tr><td><code>POSTGRES_PASSWORD</code> (runtime)</td><td><span class="badge sm">AWS Secrets Manager</span> <code>turboai-notes-{env}-db-password</code></td><td>Idem — bloco <code>secrets:</code>.</td></tr>
-      <tr><td><code>ENVIRONMENT</code>, <code>DEBUG</code>, <code>POSTGRES_DB/USER/HOST/PORT</code>, <code>ALLOWED_HOSTS</code>, <code>COOKIE_SECURE</code>, <code>COOKIE_SAMESITE</code>, <code>CLOUDWATCH_ENABLED/LOG_GROUP</code>, <code>AWS_REGION</code>, <code>CORS_ALLOWED_ORIGINS</code>, <code>CSRF_TRUSTED_ORIGINS</code>, <code>FRONTEND_URL</code></td><td><span class="badge env">ECS task definition — <code>environment</code> (texto puro)</span></td><td>Setados direto pelo Terraform em <code>container_definitions[0].environment</code>. Não são segredos — mas visíveis via <code>describe-task-definition</code>.</td></tr>
-      <tr><td><code>SECRET_KEY=unsafe-dev-only-key</code>, <code>POSTGRES_PASSWORD=turbo_dev_password</code> etc.</td><td><span class="badge local">Arquivo local <code>backend/.env</code></span> (gitignored)</td><td>Lido via <code>python-dotenv</code> em <code>config/settings.py</code>. <code>.env.example</code> documenta as chaves sem valores reais.</td></tr>
-      <tr><td>Chave privada SSH do bastion (<code>~/turbo-notes-bastion.pem</code>)</td><td><span class="badge local">Disco do operador</span> (fora do repo)</td><td>Usada pelo MCP (<code>tools/tunnel.py</code>) e para SSH manual. Só a chave <strong>pública</strong> (<code>terraform/bastion.pub</code>) é versionada.</td></tr>
+      <tr><th>Name</th><th>Where it lives</th><th>How it reaches the app</th></tr>
+      <tr><td><code>AWS_ROLE_ARN</code></td><td><span class="badge gh">GitHub Secrets</span> (repo + <code>staging</code>/<code>prod</code> Environments, both repos)</td><td>CI/CD only: <code>aws-actions/configure-aws-credentials</code> assumes the role via OIDC. Never becomes an app variable.</td></tr>
+      <tr><td><code>DB_PASSWORD</code></td><td><span class="badge gh">GitHub Secrets</span> (api repo)</td><td><code>TF_VAR_db_password</code> → RDS master password (<code>aws_db_instance.password</code>) <strong>and</strong> written to <span class="badge sm">Secrets Manager</span> <code>turboai-notes-staging-db-password</code> → read by ECS via the <code>secrets:</code> block as <code>POSTGRES_PASSWORD</code>.</td></tr>
+      <tr><td><code>DJANGO_SECRET_KEY</code></td><td><span class="badge gh">GitHub Secrets</span> (api repo)</td><td><code>TF_VAR_django_secret_key</code> → <span class="badge sm">Secrets Manager</span> <code>turboai-notes-staging-django-secret-key</code> → ECS <code>secrets:</code> → <code>SECRET_KEY</code> env var inside the container.</td></tr>
+      <tr><td><code>AWS_REGION</code></td><td><span class="badge gh">GitHub Secrets</span> (both repos)</td><td>⚠️ The API <strong>ignores</strong> this secret (hardcoded <code>us-east-2</code> in <code>deploy.yml</code>); the web repo reads <code>secrets.AWS_REGION</code> with a fallback to <code>us-east-1</code>.</td></tr>
+      <tr><td><code>API_URL</code>, <code>WEB_URL</code></td><td><span class="badge gh">GitHub Secrets</span> (both repos)</td><td>Filled in manually after the first staging <code>terraform apply</code>; used in smoke tests and as the build-time <code>NEXT_PUBLIC_API_URL</code> for the frontend.</td></tr>
+      <tr><td><code>WEB_BUCKET</code>, <code>CLOUDFRONT_ID</code></td><td><span class="badge gh">GitHub Secrets</span> (web repo)</td><td>Used only in the frontend's <code>deploy.yml</code>: <code>aws s3 sync</code> and <code>cloudfront create-invalidation</code>.</td></tr>
+      <tr><td><code>SECRET_KEY</code> (runtime)</td><td><span class="badge sm">AWS Secrets Manager</span> <code>turboai-notes-{env}-django-secret-key</code></td><td>Task definition <code>secrets:</code> block (<code>valueFrom</code> = ARN) — <strong>never appears in plain text</strong> in the task definition or the ECS console.</td></tr>
+      <tr><td><code>POSTGRES_PASSWORD</code> (runtime)</td><td><span class="badge sm">AWS Secrets Manager</span> <code>turboai-notes-{env}-db-password</code></td><td>Same — <code>secrets:</code> block.</td></tr>
+      <tr><td><code>ENVIRONMENT</code>, <code>DEBUG</code>, <code>POSTGRES_DB/USER/HOST/PORT</code>, <code>ALLOWED_HOSTS</code>, <code>COOKIE_SECURE</code>, <code>COOKIE_SAMESITE</code>, <code>CLOUDWATCH_ENABLED/LOG_GROUP</code>, <code>AWS_REGION</code>, <code>CORS_ALLOWED_ORIGINS</code>, <code>CSRF_TRUSTED_ORIGINS</code>, <code>FRONTEND_URL</code></td><td><span class="badge env">ECS task definition — <code>environment</code> (plain text)</span></td><td>Set directly by Terraform in <code>container_definitions[0].environment</code>. Not secrets — but visible via <code>describe-task-definition</code>.</td></tr>
+      <tr><td><code>SECRET_KEY=unsafe-dev-only-key</code>, <code>POSTGRES_PASSWORD=turbo_dev_password</code>, etc.</td><td><span class="badge local">Local file <code>backend/.env</code></span> (gitignored)</td><td>Read via <code>python-dotenv</code> in <code>config/settings.py</code>. <code>.env.example</code> documents the keys without real values.</td></tr>
+      <tr><td>Bastion SSH private key (<code>~/turbo-notes-bastion.pem</code>)</td><td><span class="badge local">Operator's disk</span> (outside the repo)</td><td>Used by the MCP (<code>tools/tunnel.py</code>) and for manual SSH. Only the <strong>public</strong> key (<code>terraform/bastion.pub</code>) is version-controlled.</td></tr>
     </table>
 
     <div class="callout">
-      <div class="callout-title">ℹ️ O caminho “dois saltos” dos segredos é intencional</div>
-      <p>Citando <code>docs/process/07-security-audit.md</code>: <em>“GitHub Secrets remains the source of truth Terraform reads from at apply time; Secrets Manager is what the running ECS task reads at container start; this two-hop path is intentional and standard for Terraform-managed secrets.”</em> Ou seja: GitHub Secrets → Terraform apply (grava no RDS e no Secrets Manager) → ECS task resolve do Secrets Manager no boot. O container nunca recebe o segredo via variável de ambiente comum.</p>
+      <div class="callout-title">ℹ️ The "two-hop" path for secrets is intentional</div>
+      <p>Quoting <code>docs/process/07-security-audit.md</code>: <em>"GitHub Secrets remains the source of truth Terraform reads from at apply time; Secrets Manager is what the running ECS task reads at container start; this two-hop path is intentional and standard for Terraform-managed secrets."</em> In other words: GitHub Secrets → Terraform apply (writes to RDS and Secrets Manager) → ECS task resolves from Secrets Manager at boot. The container never receives the secret via a plain environment variable.</p>
     </div>
 
     <div class="callout warn">
-      <div class="callout-title">⚠️ Atenção — antes vs. depois (07-security-audit.md)</div>
-      <p><strong>Antes</strong> do audit de 2026-08-07, <code>SECRET_KEY</code> e <code>POSTGRES_PASSWORD</code> iam <strong>em texto puro</strong> direto do GitHub Secret para o bloco <code>environment</code> da task definition (visíveis a qualquer um com <code>ecs:DescribeTaskDefinition</code>). O Secrets Manager e o SSM Parameter Store estavam <strong>completamente vazios</strong> na conta antes disso. A correção (já aplicada e vigente) moveu os dois para o bloco <code>secrets:</code> via Secrets Manager, como mostrado na tabela acima.</p>
+      <div class="callout-title">⚠️ Warning — before vs. after (07-security-audit.md)</div>
+      <p><strong>Before</strong> the 2026-08-07 audit, <code>SECRET_KEY</code> and <code>POSTGRES_PASSWORD</code> went <strong>in plain text</strong> directly from the GitHub Secret into the task definition's <code>environment</code> block (visible to anyone with <code>ecs:DescribeTaskDefinition</code>). Secrets Manager and the SSM Parameter Store were <strong>completely empty</strong> in the account before that. The fix (already applied and in effect) moved both to the <code>secrets:</code> block via Secrets Manager, as shown in the table above.</p>
     </div>
 
-    <h3>Outros achados de segurança ainda em aberto (não corrigidos)</h3>
+    <h3>Other security findings still open (not fixed)</h3>
     <table class="tight">
-      <tr><th>Achado</th><th>Status</th></tr>
-      <tr><td>Role de deploy OIDC com <code>Resource:"*"</code> em muitos serviços</td><td>Recomendado, não corrigido</td></tr>
-      <tr><td><code>ALLOWED_HOSTS = "*"</code> no Django (necessário hoje pelo health check do ALB, que bate direto no IP da tarefa)</td><td>Recomendado, não corrigido</td></tr>
-      <tr><td><code>SECURE_SSL_REDIRECT</code>/HSTS "inertes" — CloudFront→ALB é HTTP puro, sem <code>SECURE_PROXY_SSL_HEADER</code></td><td>Recomendado, não corrigido</td></tr>
-      <tr><td><code>mypy</code> não bloqueia o CI (<code>|| true</code>)</td><td>Recomendado, não corrigido</td></tr>
-      <tr><td><code>/admin/</code> do Django sem restrição de rede</td><td>Recomendado (baixa prioridade)</td></tr>
+      <tr><th>Finding</th><th>Status</th></tr>
+      <tr><td>OIDC deploy role with <code>Resource:"*"</code> across many services</td><td>Recommended, not fixed</td></tr>
+      <tr><td><code>ALLOWED_HOSTS = "*"</code> in Django (needed today because the ALB health check hits the task's IP directly)</td><td>Recommended, not fixed</td></tr>
+      <tr><td>"Inert" <code>SECURE_SSL_REDIRECT</code>/HSTS — CloudFront→ALB is plain HTTP, no <code>SECURE_PROXY_SSL_HEADER</code></td><td>Recommended, not fixed</td></tr>
+      <tr><td><code>mypy</code> does not block CI (<code>|| true</code>)</td><td>Recommended, not fixed</td></tr>
+      <tr><td>Django's <code>/admin/</code> has no network restriction</td><td>Recommended (low priority)</td></tr>
     </table>
   </section>
 
   <section class="card anchor-offset" id="autenticacao">
-    <h2>6. Autenticação</h2>
-    <p class="lede">JWT (SimpleJWT) guardado em cookies <code>httpOnly</code>, com CSRF via <em>double-submit cookie</em> adaptado para dois domínios CloudFront diferentes (front e API não compartilham origem).</p>
+    <h2>6. Authentication</h2>
+    <p class="lede">JWT (SimpleJWT) stored in <code>httpOnly</code> cookies, with CSRF via a <em>double-submit cookie</em> adapted for two different CloudFront domains (frontend and API do not share an origin).</p>
 
-    <h3>Cookies e flags</h3>
+    <h3>Cookies and flags</h3>
     <table class="tight">
-      <tr><th>Cookie</th><th>HttpOnly</th><th>Secure</th><th>SameSite</th><th>Observação</th></tr>
-      <tr><td><code>access_token</code></td><td>✅</td><td><code>COOKIE_SECURE</code> (true em staging/prod)</td><td><code>COOKIE_SAMESITE</code> = <code>None</code> em staging/prod</td><td>JWT de acesso — 15 min por padrão (<code>ACCESS_TOKEN_LIFETIME_MINUTES</code>)</td></tr>
-      <tr><td><code>refresh_token</code></td><td>✅</td><td>idem</td><td>idem</td><td>Rotaciona a cada uso (<code>ROTATE_REFRESH_TOKENS</code>), blacklist após rotação — 7 dias por padrão</td></tr>
-      <tr><td><code>csrftoken</code> (Django)</td><td>❌ (<code>CSRF_COOKIE_HTTPONLY=False</code>, precisa ser lido)</td><td><code>CSRF_COOKIE_SECURE=True</code> em staging/prod</td><td><code>CSRF_COOKIE_SAMESITE = COOKIE_SAMESITE</code> → <code>None</code> em staging/prod</td><td>Alinhado ao <code>COOKIE_SAMESITE</code> desde a correção de 09-08 (antes era <code>Lax</code> fixo — o bug)</td></tr>
+      <tr><th>Cookie</th><th>HttpOnly</th><th>Secure</th><th>SameSite</th><th>Note</th></tr>
+      <tr><td><code>access_token</code></td><td>✅</td><td><code>COOKIE_SECURE</code> (true in staging/prod)</td><td><code>COOKIE_SAMESITE</code> = <code>None</code> in staging/prod</td><td>Access JWT — 15 min by default (<code>ACCESS_TOKEN_LIFETIME_MINUTES</code>)</td></tr>
+      <tr><td><code>refresh_token</code></td><td>✅</td><td>same</td><td>same</td><td>Rotates on every use (<code>ROTATE_REFRESH_TOKENS</code>), blacklisted after rotation — 7 days by default</td></tr>
+      <tr><td><code>csrftoken</code> (Django)</td><td>❌ (<code>CSRF_COOKIE_HTTPONLY=False</code>, needs to be readable)</td><td><code>CSRF_COOKIE_SECURE=True</code> in staging/prod</td><td><code>CSRF_COOKIE_SAMESITE = COOKIE_SAMESITE</code> → <code>None</code> in staging/prod</td><td>Aligned with <code>COOKIE_SAMESITE</code> since the 08-09 fix (previously fixed at <code>Lax</code> — the bug)</td></tr>
     </table>
 
-    <h3>Por que "SameSite=None" e um endpoint de bootstrap de CSRF?</h3>
-    <p>Web e API rodam em <strong>domínios CloudFront diferentes</strong> (<code>d1qdib1mcwro0s...</code> vs <code>d1ukfp2c7u1v45...</code>) — não há subdomínio compartilhado nem cookie de app comum. Isso cria dois problemas resolvidos em <code>docs/process/10-csrf-cross-origin-fix.md</code>:</p>
+    <h3>Why "SameSite=None" and a CSRF bootstrap endpoint?</h3>
+    <p>Web and API run on <strong>different CloudFront domains</strong> (<code>d1qdib1mcwro0s...</code> vs <code>d1ukfp2c7u1v45...</code>) — there is no shared subdomain or common app cookie. This creates two problems solved in <code>docs/process/10-csrf-cross-origin-fix.md</code>:</p>
     <ol>
-      <li>Cookies <code>SameSite=Lax</code> (padrão do Django) não são enviados em POSTs cross-site — o navegador simplesmente omite o <code>csrftoken</code> na requisição para a API, e o Django rejeita com 403 mesmo que o header esteja certo.</li>
-      <li><code>document.cookie</code> só enxerga cookies do <strong>próprio</strong> domínio (o do frontend) — o <code>csrftoken</code> setado pela API nunca é legível via JS na SPA.</li>
+      <li><code>SameSite=Lax</code> cookies (Django's default) are not sent on cross-site POSTs — the browser simply omits the <code>csrftoken</code> on the request to the API, and Django rejects it with a 403 even if the header is correct.</li>
+      <li><code>document.cookie</code> only sees cookies from the <strong>frontend's own</strong> domain — the <code>csrftoken</code> set by the API is never readable via JS in the SPA.</li>
     </ol>
-    <p><strong>Solução implementada</strong> (backend + frontend, shipada em <code>develop</code>): o backend alinha <code>CSRF_COOKIE_SAMESITE</code>/<code>SESSION_COOKIE_SAMESITE</code> ao mesmo <code>COOKIE_SAMESITE</code> das JWT, e o endpoint <code>GET /api/auth/csrf/</code> retorna o token também no <strong>corpo JSON</strong> (<code>{"csrfToken": "..."}</code>), não só no cookie. O frontend guarda esse token em memória e o envia via header <code>X-CSRFToken</code> em toda requisição que não seja GET/HEAD/OPTIONS/TRACE.</p>
+    <p><strong>Implemented solution</strong> (backend + frontend, shipped on <code>develop</code>): the backend aligns <code>CSRF_COOKIE_SAMESITE</code>/<code>SESSION_COOKIE_SAMESITE</code> with the same <code>COOKIE_SAMESITE</code> used for the JWTs, and the <code>GET /api/auth/csrf/</code> endpoint also returns the token in the <strong>JSON body</strong> (<code>{"csrfToken": "..."}</code>), not just the cookie. The frontend keeps this token in memory and sends it via the <code>X-CSRFToken</code> header on every request that isn't GET/HEAD/OPTIONS/TRACE.</p>
 
     <div class="diagram-box">
       <pre class="mermaid">
 sequenceDiagram
-  actor U as Usuário
+  actor U as User
   participant FE as Frontend (Next.js SPA)
   participant API as API (Django/DRF)
 
-  Note over FE,API: 1. Bootstrap de CSRF (antes de qualquer POST)
+  Note over FE,API: 1. CSRF bootstrap (before any POST)
   FE->>API: GET /api/auth/csrf/ (credentials: include)
-  API-->>FE: Set-Cookie csrftoken (SameSite=None, Secure)<br/>body JSON com csrfToken
-  FE->>FE: guarda csrfToken em memória<br/>(cookie cross-origin não é legível via document.cookie)
+  API-->>FE: Set-Cookie csrftoken (SameSite=None, Secure)<br/>JSON body with csrfToken
+  FE->>FE: stores csrfToken in memory<br/>(cross-origin cookie is not readable via document.cookie)
 
   Note over FE,API: 2. Login
-  U->>FE: email + senha
+  U->>FE: email + password
   FE->>API: POST /api/auth/login/ (X-CSRFToken, credentials: include)
   API->>API: authenticate() + django_login()<br/>RefreshToken.for_user(user)
   API-->>FE: Set-Cookie access_token (httpOnly, Secure, SameSite=None)<br/>Set-Cookie refresh_token (httpOnly, Secure, SameSite=None)
 
-  Note over FE,API: 3. Requisição autenticada mutável
+  Note over FE,API: 3. Authenticated mutable request
   FE->>API: POST /api/notes/ (Cookie access_token + X-CSRFToken)
-  API->>API: CookieJWTAuthentication.authenticate()<br/>valida JWT do cookie
+  API->>API: CookieJWTAuthentication.authenticate()<br/>validates the JWT from the cookie
   API->>API: enforce_csrf() via CSRFCheck
   API-->>FE: 201 Created
 
-  Note over FE,API: 4. Sem X-CSRFToken → bloqueado (enforcement continua ativo)
-  FE->>API: POST /api/notes/ (Cookie access_token, sem X-CSRFToken)
+  Note over FE,API: 4. No X-CSRFToken → blocked (enforcement remains active)
+  FE->>API: POST /api/notes/ (Cookie access_token, no X-CSRFToken)
   API-->>FE: 403 "CSRF Failed: ..."
       </pre>
-      <div class="caption">Fig. 6 — Fluxo completo: bootstrap de CSRF → login → requisição mutável autenticada. Verificado ao vivo em staging: sem <code>X-CSRFToken</code> → 403; com o header → 200/201.</div>
+      <div class="caption">Fig. 6 — Full flow: CSRF bootstrap → login → authenticated mutable request. Verified live on staging: no <code>X-CSRFToken</code> → 403; with the header → 200/201.</div>
     </div>
 
-    <h3>Detalhes de implementação</h3>
+    <h3>Implementation details</h3>
     <div class="grid-2">
       <div>
         <h4>Backend (<code>apps/accounts/authentication.py</code>)</h4>
-        <p><code>CookieJWTAuthentication</code> estende <code>JWTAuthentication</code> do SimpleJWT: se vier header <code>Authorization: Bearer</code>, usa o fluxo padrão (sem CSRF — pensado para clientes CLI/mobile). Se vier só o cookie <code>access_token</code>, valida o JWT <strong>e</strong> chama <code>enforce_csrf()</code> manualmente — porque o <code>APIView</code> do DRF desliga o middleware de CSRF do Django por padrão, então a autenticação por cookie precisa reimpor essa proteção.</p>
+        <p><code>CookieJWTAuthentication</code> extends SimpleJWT's <code>JWTAuthentication</code>: if an <code>Authorization: Bearer</code> header is present, it uses the standard flow (no CSRF — intended for CLI/mobile clients). If only the <code>access_token</code> cookie is present, it validates the JWT <strong>and</strong> manually calls <code>enforce_csrf()</code> — because DRF's <code>APIView</code> disables Django's CSRF middleware by default, so cookie-based authentication needs to reimpose that protection.</p>
       </div>
       <div>
         <h4>Frontend (<code>src/lib/api.ts</code>)</h4>
-        <p>Cliente <code>fetch</code> fino, sem contexto de auth nem hook <code>useAuth</code>. Toda chamada usa <code>credentials: "include"</code>. Para métodos não seguros (tudo exceto GET/HEAD/OPTIONS/TRACE), chama <code>ensureCsrfToken()</code> que reusa o token em memória ou busca via <code>/api/auth/csrf/</code>, e injeta <code>X-CSRFToken</code>. Nunca guarda JWT em <code>localStorage</code>/<code>sessionStorage</code>.</p>
+        <p>A thin <code>fetch</code> client, with no auth context or <code>useAuth</code> hook. Every call uses <code>credentials: "include"</code>. For unsafe methods (everything except GET/HEAD/OPTIONS/TRACE), it calls <code>ensureCsrfToken()</code>, which reuses the in-memory token or fetches it via <code>/api/auth/csrf/</code>, and injects <code>X-CSRFToken</code>. Never stores a JWT in <code>localStorage</code>/<code>sessionStorage</code>.</p>
       </div>
     </div>
 
-    <h3>CORS — travado por ambiente</h3>
+    <h3>CORS — locked down per environment</h3>
     <table class="tight">
-      <tr><th>Ambiente</th><th><code>CORS_ALLOWED_ORIGINS</code> / <code>CSRF_TRUSTED_ORIGINS</code></th></tr>
+      <tr><th>Environment</th><th><code>CORS_ALLOWED_ORIGINS</code> / <code>CSRF_TRUSTED_ORIGINS</code></th></tr>
       <tr><td>Local</td><td><code>http://localhost:3000</code> (+ <code>127.0.0.1:3000</code>)</td></tr>
-      <tr><td>Staging</td><td><code>https://d1qdib1mcwro0s.cloudfront.net</code> — <strong>somente</strong> a origem do web CloudFront desse ambiente</td></tr>
-      <tr><td>Prod (quando existir)</td><td>a URL do web CloudFront/domínio daquele stack — nunca a de staging, nunca <code>*</code></td></tr>
+      <tr><td>Staging</td><td><code>https://d1qdib1mcwro0s.cloudfront.net</code> — <strong>only</strong> that environment's web CloudFront origin</td></tr>
+      <tr><td>Prod (once it exists)</td><td>that stack's web CloudFront URL/domain — never staging's, never <code>*</code></td></tr>
     </table>
-    <p><code>CORS_ALLOW_CREDENTIALS = True</code> com <code>CORS_ALLOW_ALL_ORIGINS = False</code> — combinação obrigatória (credentials + wildcard é rejeitado pelo próprio <code>django-cors-headers</code>). Uma função de guarda em <code>config/settings.py</code> (<code>_assert_deployed_origin_allowlist</code>) recusa subir com <code>ENVIRONMENT</code> em staging/production se a allowlist estiver vazia, tiver wildcard ou contiver <code>localhost</code>.</p>
+    <p><code>CORS_ALLOW_CREDENTIALS = True</code> with <code>CORS_ALLOW_ALL_ORIGINS = False</code> — a required combination (credentials + wildcard is rejected by <code>django-cors-headers</code> itself). A guard function in <code>config/settings.py</code> (<code>_assert_deployed_origin_allowlist</code>) refuses to start with <code>ENVIRONMENT</code> set to staging/production if the allowlist is empty, contains a wildcard, or contains <code>localhost</code>.</p>
 
     <div class="callout">
-      <div class="callout-title">ℹ️ Login/lockout e throttling</div>
-      <p><code>django-axes</code> bloqueia após 5 tentativas de login falhas (<code>AXES_FAILURE_LIMIT=5</code>, cooldown de 1h). DRF aplica throttle de <code>20/minuto</code> no escopo <code>auth</code> (register/login/refresh) e <code>50/hora</code> anônimo / <code>1000/hora</code> autenticado nos demais endpoints.</p>
+      <div class="callout-title">ℹ️ Login lockout and throttling</div>
+      <p><code>django-axes</code> locks out after 5 failed login attempts (<code>AXES_FAILURE_LIMIT=5</code>, 1h cooldown). DRF applies a <code>20/minute</code> throttle on the <code>auth</code> scope (register/login/refresh) and <code>50/hour</code> anonymous / <code>1000/hour</code> authenticated on the remaining endpoints.</p>
     </div>
   </section>
 
   <section class="card anchor-offset" id="mcp-skills">
-    <h2>7. MCP e Skills — quando usar cada um</h2>
-    <p class="lede">Dois mecanismos de automação vivem neste repositório: um servidor <strong>MCP</strong> para operar a AWS (<code>backend/mcp/server.py</code>) e duas <strong>skills do Cursor</strong> (<code>.cursor/skills/</code>) para fluxos de revisão e e2e.</p>
+    <h2>7. MCP and Skills — when to use each</h2>
+    <p class="lede">Two automation mechanisms live in this repository: an <strong>MCP</strong> server to operate AWS (<code>backend/mcp/server.py</code>) and two <strong>Cursor skills</strong> (<code>.cursor/skills/</code>) for review and e2e workflows.</p>
 
     <h3>MCP <code>turbo-notes-aws</code> (<code>backend/mcp/server.py</code>)</h3>
-    <p>Servidor FastMCP que expõe ferramentas de AWS para a conta <code>615737882760</code>, com túnel SSH via o bastion EC2 para alcançar o RDS (que é privado). <strong>17 tools</strong> ao todo:</p>
+    <p>A FastMCP server that exposes AWS tools for account <code>615737882760</code>, with an SSH tunnel via the EC2 bastion to reach the RDS instance (which is private). <strong>17 tools</strong> in total:</p>
     <table class="tight">
-      <tr><th>Categoria</th><th>Tools</th><th>Descrição</th></tr>
-      <tr><td>SSO / sessão</td><td><code>aws_sso_status</code>, <code>aws_sso_login</code></td><td>Checa/gera sessão SSO (perfil <code>AdministratorAccess-615737882760</code>)</td></tr>
-      <tr><td>Orientação</td><td><code>choose_env_help</code>, <code>env_info</code></td><td>Lembrete para perguntar staging vs prod; mostra config sem expor segredos</td></tr>
-      <tr><td>Túnel</td><td><code>tunnel_status</code>, <code>tunnel_start</code>, <code>tunnel_stop</code></td><td>Abre/fecha túnel SSH local → RDS via bastion (porta local 5435=staging / 5436=prod)</td></tr>
-      <tr><td>Banco (leitura)</td><td><code>db_ping</code>, <code>db_query</code>, <code>db_list_schemas</code>, <code>db_list_tables</code>, <code>db_describe_table</code></td><td>SQL somente leitura (allowlist de palavras-chave <code>select/with/show/explain/values/table</code>) — permitido em staging <strong>e</strong> prod</td></tr>
-      <tr><td>Banco (escrita)</td><td><code>db_execute</code></td><td><strong>Recusado em prod</strong> incondicionalmente; em staging exige <code>confirm=true</code></td></tr>
-      <tr><td>Seed</td><td><code>seed_staging</code></td><td>Só staging; na prática recomenda usar <code>POST /api/seed/</code> em vez de SQL direto, para não pular a lógica da aplicação</td></tr>
-      <tr><td>Logs</td><td><code>logs_list_groups</code>, <code>logs_tail</code>, <code>logs_insights</code></td><td>CloudWatch Logs — grupos com prefixo <code>/turboai/notes</code></td></tr>
+      <tr><th>Category</th><th>Tools</th><th>Description</th></tr>
+      <tr><td>SSO / session</td><td><code>aws_sso_status</code>, <code>aws_sso_login</code></td><td>Checks/generates the SSO session (<code>AdministratorAccess-615737882760</code> profile)</td></tr>
+      <tr><td>Guidance</td><td><code>choose_env_help</code>, <code>env_info</code></td><td>Reminder to ask staging vs prod; shows config without exposing secrets</td></tr>
+      <tr><td>Tunnel</td><td><code>tunnel_status</code>, <code>tunnel_start</code>, <code>tunnel_stop</code></td><td>Opens/closes the local SSH tunnel → RDS via the bastion (local port 5435=staging / 5436=prod)</td></tr>
+      <tr><td>Database (read)</td><td><code>db_ping</code>, <code>db_query</code>, <code>db_list_schemas</code>, <code>db_list_tables</code>, <code>db_describe_table</code></td><td>Read-only SQL (keyword allowlist <code>select/with/show/explain/values/table</code>) — allowed in staging <strong>and</strong> prod</td></tr>
+      <tr><td>Database (write)</td><td><code>db_execute</code></td><td><strong>Refused in prod</strong> unconditionally; requires <code>confirm=true</code> in staging</td></tr>
+      <tr><td>Seed</td><td><code>seed_staging</code></td><td>Staging only; in practice recommends using <code>POST /api/seed/</code> instead of raw SQL, so as not to skip application logic</td></tr>
+      <tr><td>Logs</td><td><code>logs_list_groups</code>, <code>logs_tail</code>, <code>logs_insights</code></td><td>CloudWatch Logs — groups with the <code>/turboai/notes</code> prefix</td></tr>
     </table>
 
     <div class="callout warn">
-      <div class="callout-title">⚠️ Atenção — guardrails de prod (reais, no código)</div>
-      <p>Em <code>mcp/tools/db_env.py</code>: a conexão com prod abre com <code>default_transaction_read_only=on</code> no Postgres (o próprio banco recusa qualquer escrita, não só o código Python). <code>db_execute</code> retorna erro imediato se o ambiente for <code>prod</code>, antes mesmo de conectar. Instruções do servidor MCP (<code>FastMCP(..., instructions=...)</code>) dizem explicitamente: <em>“ALWAYS ask whether the user wants staging or prod before DB operations… Prod DB is READ-ONLY.”</em></p>
+      <div class="callout-title">⚠️ Warning — prod guardrails (real, in the code)</div>
+      <p>In <code>mcp/tools/db_env.py</code>: the connection to prod is opened with <code>default_transaction_read_only=on</code> on Postgres (the database itself refuses any write, not just the Python code). <code>db_execute</code> returns an immediate error if the environment is <code>prod</code>, before even connecting. The MCP server's instructions (<code>FastMCP(..., instructions=...)</code>) explicitly state: <em>"ALWAYS ask whether the user wants staging or prod before DB operations… Prod DB is READ-ONLY."</em></p>
     </div>
 
-    <h3>Skills do Cursor (<code>.cursor/skills/</code>)</h3>
+    <h3>Cursor Skills (<code>.cursor/skills/</code>)</h3>
     <table class="tight">
-      <tr><th>Skill</th><th>O que faz</th><th>Quando usar</th></tr>
-      <tr><td><code>pr-review-loop</code></td><td>Dois modos: (1) itera PRs abertos nos dois repos, roda lint/test, aplica correções de comentários de review, commita e espera CI ficar verde; (2) revisão geral de qualidade/segurança sobre código não commitado ou toda a base, seguida do mesmo ciclo commit→CI→revisão</td><td>“Revisa os PRs abertos”, “deixa isso pronto pra mergear”, ou como passo de auditoria de qualidade sobre toda a base</td></tr>
-      <tr><td><code>e2e-notes</code></td><td>Lê <code>docs/e2e.md</code>, roda os casos E1–E10 via Playwright/Chrome MCP (UI) + <code>curl</code> (API) + <code>psql</code>/MCP <code>db_query</code> (banco), escreve <code>docs/e2e-report.md</code>, corrige e repete até tudo passar</td><td>Depois de mexer em auth/CSRF/UI, ou antes de considerar uma feature “pronta”</td></tr>
+      <tr><th>Skill</th><th>What it does</th><th>When to use it</th></tr>
+      <tr><td><code>pr-review-loop</code></td><td>Two modes: (1) iterates over open PRs in both repos, runs lint/test, applies fixes from review comments, commits, and waits for CI to go green; (2) general quality/security review of uncommitted code or the whole codebase, followed by the same commit→CI→review cycle</td><td>"Review the open PRs", "get this ready to merge", or as a quality-audit step over the whole codebase</td></tr>
+      <tr><td><code>e2e-notes</code></td><td>Reads <code>docs/e2e.md</code>, runs cases E1–E10 via Playwright/Chrome MCP (UI) + <code>curl</code> (API) + <code>psql</code>/MCP <code>db_query</code> (database), writes <code>docs/e2e-report.md</code>, fixes and repeats until everything passes</td><td>After touching auth/CSRF/UI, or before considering a feature "done"</td></tr>
     </table>
 
-    <h3>Tabela de decisão prática</h3>
+    <h3>Practical decision table</h3>
     <table>
-      <tr><th>Eu quero...</th><th>Uso isto</th></tr>
-      <tr><td>Ver logs de erro recentes da API em staging</td><td>MCP <code>logs_tail</code> ou <code>logs_insights</code> (<code>env="staging"</code>)</td></tr>
-      <tr><td>Rodar uma consulta só de leitura no banco de staging <em>ou</em> prod</td><td>MCP <code>db_query</code> (<code>env="staging"</code> ou <code>"prod"</code>) — sempre pergunte qual ambiente antes</td></tr>
-      <tr><td>Inserir/alterar dados no banco</td><td>MCP <code>db_execute(env="staging", confirm=true)</code> — <strong>nunca</strong> em prod (bloqueado pelo próprio servidor)</td></tr>
-      <tr><td>Popular dados de demonstração</td><td><code>POST /api/seed/</code> direto na API de staging (o próprio <code>seed_staging</code> do MCP recomenda isso em vez de SQL bruto)</td></tr>
-      <tr><td>Verificar/renovar sessão AWS</td><td>MCP <code>aws_sso_status</code> → se inválida, <code>aws_sso_login</code></td></tr>
-      <tr><td>Abrir/fechar túnel SSH até o RDS via bastion</td><td>MCP <code>tunnel_start</code> / <code>tunnel_status</code> / <code>tunnel_stop</code></td></tr>
-      <tr><td>Ver a configuração do MCP sem vazar segredo</td><td>MCP <code>env_info</code></td></tr>
-      <tr><td>Revisar PRs abertos e deixá-los prontos para merge</td><td>Skill <code>pr-review-loop</code> (modo Open-PR)</td></tr>
-      <tr><td>Fazer uma revisão de qualidade/segurança de código não commitado ou de toda a base</td><td>Skill <code>pr-review-loop</code> (modo geral)</td></tr>
-      <tr><td>Validar login, CRUD de notas e isolamento por usuário fim-a-fim</td><td>Skill <code>e2e-notes</code></td></tr>
+      <tr><th>I want to...</th><th>Use this</th></tr>
+      <tr><td>See recent API error logs on staging</td><td>MCP <code>logs_tail</code> or <code>logs_insights</code> (<code>env="staging"</code>)</td></tr>
+      <tr><td>Run a read-only query against the staging <em>or</em> prod database</td><td>MCP <code>db_query</code> (<code>env="staging"</code> or <code>"prod"</code>) — always ask which environment first</td></tr>
+      <tr><td>Insert/update data in the database</td><td>MCP <code>db_execute(env="staging", confirm=true)</code> — <strong>never</strong> on prod (blocked by the server itself)</td></tr>
+      <tr><td>Populate demo data</td><td><code>POST /api/seed/</code> directly on the staging API (the MCP's own <code>seed_staging</code> recommends this over raw SQL)</td></tr>
+      <tr><td>Check/renew the AWS session</td><td>MCP <code>aws_sso_status</code> → if invalid, <code>aws_sso_login</code></td></tr>
+      <tr><td>Open/close the SSH tunnel to RDS via the bastion</td><td>MCP <code>tunnel_start</code> / <code>tunnel_status</code> / <code>tunnel_stop</code></td></tr>
+      <tr><td>View the MCP configuration without leaking secrets</td><td>MCP <code>env_info</code></td></tr>
+      <tr><td>Review open PRs and get them ready to merge</td><td>Skill <code>pr-review-loop</code> (Open-PR mode)</td></tr>
+      <tr><td>Do a quality/security review of uncommitted code or the whole codebase</td><td>Skill <code>pr-review-loop</code> (general mode)</td></tr>
+      <tr><td>Validate login, notes CRUD, and per-user isolation end-to-end</td><td>Skill <code>e2e-notes</code></td></tr>
     </table>
 
     <div class="callout">
-      <div class="callout-title">ℹ️ Quando <strong>não</strong> usar o MCP</div>
-      <p>O MCP <strong>não</strong> deve ser usado para lógica de negócio (isso é sempre no Django), nem para escrever em prod (impossível por design), nem como atalho para pular a API ao popular dados — <code>seed_demo</code> aponta de volta para <code>POST /api/seed/</code> de propósito, justamente para não bypassar validações da aplicação.</p>
+      <div class="callout-title">ℹ️ When <strong>not</strong> to use the MCP</div>
+      <p>The MCP should <strong>not</strong> be used for business logic (that always lives in Django), nor to write to prod (impossible by design), nor as a shortcut to bypass the API when populating data — <code>seed_demo</code> intentionally points back to <code>POST /api/seed/</code>, precisely so it doesn't bypass application validations.</p>
     </div>
   </section>
 
   <section class="card anchor-offset" id="guia-feature">
-    <h2>8. Como criar uma nova feature (guia prático)</h2>
-    <p class="lede">Passo a passo hipotético usando como exemplo <strong>"adicionar tags a notas"</strong> — uma feature que tocaria backend, frontend, banco e os dois pipelines de deploy.</p>
+    <h2>8. How to build a new feature (practical guide)</h2>
+    <p class="lede">A hypothetical step-by-step using <strong>"add tags to notes"</strong> as an example — a feature that would touch the backend, frontend, database, and both deploy pipelines.</p>
 
     <div class="diagram-box">
       <pre class="mermaid">
 flowchart TD
-  A["1. Branch feature/note-tags<br/>a partir de develop (nos 2 repos, se necessário)"] --> B["2. Backend: model Tag + M2M em Note,<br/>migration, serializer, view, urls,<br/>testes em apps/notes/tests/"]
-  B --> C["3. Frontend: componente de tags,<br/>método em src/lib/api.ts,<br/>testes co-localizados *.test.tsx"]
-  C --> D["4. Rodar local: docker compose up --build<br/>(ou USE_SQLITE=true p/ testes rápidos sem Postgres)"]
-  D --> E["5. Gates locais:<br/>ruff + mypy + pytest (100%)<br/>prettier + eslint + tsc + vitest (100%)"]
-  E --> F["6. Abrir PR → develop<br/>(no(s) repo(s) alterado(s))"]
-  F --> G["7. ci.yml roda automaticamente<br/>+ ai-review.yml comenta heurísticas"]
-  G -->|"1 aprovação + CI verde"| H["8. Merge em develop"]
-  H --> I["9. deploy.yml dispara sozinho<br/>→ ambiente staging<br/>(ECS force-deploy e/ou S3 sync + CF invalidate)"]
-  I --> J["10. Testar em staging<br/>(URLs CloudFront reais, skill e2e-notes,<br/>MCP db_query p/ inspecionar dados)"]
-  J --> K["11. PR develop → main (1 aprovação)"]
-  K --> L["12. Publicar GitHub Release a partir de main"]
-  L --> M["13. deploy.yml dispara → ambiente prod<br/>🚧 caminho existe no código, nunca exercido de fato"]
+  A["1. Branch feature/note-tags<br/>from develop (in both repos, if needed)"] --> B["2. Backend: Tag model + M2M on Note,<br/>migration, serializer, view, urls,<br/>tests in apps/notes/tests/"]
+  B --> C["3. Frontend: tags component,<br/>method in src/lib/api.ts,<br/>co-located *.test.tsx tests"]
+  C --> D["4. Run locally: docker compose up --build<br/>(or USE_SQLITE=true for fast tests without Postgres)"]
+  D --> E["5. Local gates:<br/>ruff + mypy + pytest (100%)<br/>prettier + eslint + tsc + vitest (100%)"]
+  E --> F["6. Open PR → develop<br/>(in whichever repo(s) changed)"]
+  F --> G["7. ci.yml runs automatically<br/>+ ai-review.yml comments heuristics"]
+  G -->|"1 approval + green CI"| H["8. Merge into develop"]
+  H --> I["9. deploy.yml triggers on its own<br/>→ staging environment<br/>(ECS force-deploy and/or S3 sync + CF invalidate)"]
+  I --> J["10. Test on staging<br/>(real CloudFront URLs, e2e-notes skill,<br/>MCP db_query to inspect data)"]
+  J --> K["11. PR develop → main (1 approval)"]
+  K --> L["12. Publish GitHub Release from main"]
+  L --> M["13. deploy.yml triggers → prod environment<br/>🚧 path exists in code, never actually exercised"]
 
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
   classDef pending fill:#e7f0e3,stroke:#6b9e6e,stroke-width:1.5px,color:#2e5230,stroke-dasharray: 4 3;
   class A,B,C,D,E,F,G,H,I,J,K live;
   class L,M pending;
       </pre>
-      <div class="caption">Fig. 7 — Ciclo de vida completo de uma feature, do código ao (potencial) deploy em prod.</div>
+      <div class="caption">Fig. 7 — Full lifecycle of a feature, from code to (potential) prod deploy.</div>
     </div>
 
-    <h3>Onde cada peça entra, em detalhe</h3>
+    <h3>Where each piece fits, in detail</h3>
     <table>
-      <tr><th>Etapa</th><th>Onde / arquivos</th></tr>
-      <tr><td>Modelo de dados</td><td><code>backend/apps/notes/models.py</code> (ex.: novo model <code>Tag</code>, <code>ManyToManyField</code> em <code>Note</code>) + <code>python manage.py makemigrations</code> → <code>apps/notes/migrations/000X_*.py</code></td></tr>
-      <tr><td>Regras de posse/permissão</td><td><code>backend/apps/notes/permissions.py</code> (<code>IsOwner</code>) — <strong>nunca</strong> no frontend, por regra do projeto</td></tr>
-      <tr><td>Serializer / View / URL</td><td><code>apps/notes/serializers.py</code>, <code>apps/notes/views.py</code>, <code>apps/notes/urls.py</code> (registrado sob <code>/api/</code> em <code>config/urls.py</code>)</td></tr>
-      <tr><td>Testes backend (100% obrigatório)</td><td><code>apps/notes/tests/test_notes.py</code> — <code>pytest.ini</code> tem <code>--cov-fail-under=100</code> sobre <code>apps/</code></td></tr>
-      <tr><td>Cliente de API frontend</td><td><code>frontend/src/lib/api.ts</code> — adicionar método tipado (ex.: <code>tags()</code>, <code>addTag()</code>), sem lógica de negócio</td></tr>
-      <tr><td>Componente de UI</td><td><code>frontend/src/components/</code> (ex.: seletor de tags no <code>NoteEditor.tsx</code>), respeitando a paleta em <code>globals.css</code></td></tr>
-      <tr><td>Testes frontend (100% obrigatório)</td><td><code>*.test.tsx</code> co-localizado — <code>vitest.config.ts</code> exige 100% em <code>src/**/*.{ts,tsx}</code> (exceto <code>layout.tsx</code>)</td></tr>
-      <tr><td>Dev local — Docker</td><td><code>backend/docker-compose.yml</code>: serviço <code>db</code> (Postgres 16, porta host 5434), <code>api</code> (porta 8000), <code>web</code> (porta 3000, build a partir de <code>../frontend</code>)</td></tr>
-      <tr><td>Dev local — sem Docker</td><td><code>USE_SQLITE=true</code> no <code>.env</code> troca o backend do Postgres do compose para SQLite local — mais rápido para rodar só a suíte de testes (é o que o CI faz também)</td></tr>
-      <tr><td>Abrir PR</td><td><code>gh pr create</code> em <code>turboai-notes-api</code> e/ou <code>turboai-notes-web</code>, base <code>develop</code></td></tr>
-      <tr><td>Checks obrigatórios no PR</td><td><code>ci.yml</code> (lint + typecheck + testes + cobertura 100%) — hoje <strong>não é</strong> status check obrigatório no GitHub, mas é convenção do time rodar e manter verde antes de pedir review</td></tr>
-      <tr><td>Deploy em staging</td><td>Automático ao mergear em <code>develop</code> — sem ação manual</td></tr>
-      <tr><td>Testar em staging</td><td>URLs reais de CloudFront (seção 1), skill <code>e2e-notes</code>, ou <code>db_query</code> via MCP para inspecionar o banco</td></tr>
-      <tr><td>Deploy em prod</td><td>PR <code>develop</code> → <code>main</code> (1 aprovação) → <code>gh release create</code> publicada → <code>deploy.yml</code> dispara automaticamente — <strong>hoje isso nunca foi executado</strong>, prod não existe ainda</td></tr>
+      <tr><th>Step</th><th>Where / files</th></tr>
+      <tr><td>Data model</td><td><code>backend/apps/notes/models.py</code> (e.g., new <code>Tag</code> model, <code>ManyToManyField</code> on <code>Note</code>) + <code>python manage.py makemigrations</code> → <code>apps/notes/migrations/000X_*.py</code></td></tr>
+      <tr><td>Ownership/permission rules</td><td><code>backend/apps/notes/permissions.py</code> (<code>IsOwner</code>) — <strong>never</strong> in the frontend, per project rule</td></tr>
+      <tr><td>Serializer / View / URL</td><td><code>apps/notes/serializers.py</code>, <code>apps/notes/views.py</code>, <code>apps/notes/urls.py</code> (registered under <code>/api/</code> in <code>config/urls.py</code>)</td></tr>
+      <tr><td>Backend tests (100% required)</td><td><code>apps/notes/tests/test_notes.py</code> — <code>pytest.ini</code> has <code>--cov-fail-under=100</code> over <code>apps/</code></td></tr>
+      <tr><td>Frontend API client</td><td><code>frontend/src/lib/api.ts</code> — add a typed method (e.g., <code>tags()</code>, <code>addTag()</code>), no business logic</td></tr>
+      <tr><td>UI component</td><td><code>frontend/src/components/</code> (e.g., tag selector in <code>NoteEditor.tsx</code>), respecting the palette in <code>globals.css</code></td></tr>
+      <tr><td>Frontend tests (100% required)</td><td>Co-located <code>*.test.tsx</code> — <code>vitest.config.ts</code> requires 100% on <code>src/**/*.{ts,tsx}</code> (except <code>layout.tsx</code>)</td></tr>
+      <tr><td>Local dev — Docker</td><td><code>backend/docker-compose.yml</code>: <code>db</code> service (Postgres 16, host port 5434), <code>api</code> (port 8000), <code>web</code> (port 3000, built from <code>../frontend</code>)</td></tr>
+      <tr><td>Local dev — without Docker</td><td><code>USE_SQLITE=true</code> in <code>.env</code> swaps the compose Postgres backend for local SQLite — faster for just running the test suite (this is also what CI does)</td></tr>
+      <tr><td>Open a PR</td><td><code>gh pr create</code> in <code>turboai-notes-api</code> and/or <code>turboai-notes-web</code>, base <code>develop</code></td></tr>
+      <tr><td>Required PR checks</td><td><code>ci.yml</code> (lint + typecheck + tests + 100% coverage) — today it is <strong>not</strong> a required status check on GitHub, but it's team convention to run it and keep it green before requesting review</td></tr>
+      <tr><td>Staging deploy</td><td>Automatic when merged into <code>develop</code> — no manual action</td></tr>
+      <tr><td>Testing on staging</td><td>Real CloudFront URLs (section 1), the <code>e2e-notes</code> skill, or <code>db_query</code> via MCP to inspect the database</td></tr>
+      <tr><td>Prod deploy</td><td>PR <code>develop</code> → <code>main</code> (1 approval) → published <code>gh release create</code> → <code>deploy.yml</code> triggers automatically — <strong>this has never actually been executed</strong>, prod does not exist yet</td></tr>
     </table>
 
     <div class="callout">
-      <div class="callout-title">ℹ️ Comando rápido para rodar tudo localmente</div>
+      <div class="callout-title">ℹ️ Quick command to run everything locally</div>
       <pre><code>cd backend
 cp .env.example .env
 docker compose up --build
-# API:      http://localhost:8000  (Swagger em /api/docs/)
+# API:      http://localhost:8000  (Swagger at /api/docs/)
 # Web:      http://localhost:3000
-# Postgres: localhost:5434 (dentro da rede compose: db:5432)</code></pre>
+# Postgres: localhost:5434 (inside the compose network: db:5432)</code></pre>
     </div>
 
     <div class="callout warn">
-      <div class="callout-title">⚠️ Atenção — nunca pule a fronteira de responsabilidade</div>
-      <p>Regra fixa do projeto (<code>.cursor/rules/turbo-notes.mdc</code>): autorização, posse (<code>request.user</code>) e regras de senha vivem <strong>só</strong> no Django. O Next.js é cliente de API fino — se uma feature nova "precisar" checar permissão no frontend, é sinal de que a checagem real está faltando no backend.</p>
+      <div class="callout-title">⚠️ Warning — never skip the responsibility boundary</div>
+      <p>Fixed project rule (<code>.cursor/rules/turbo-notes.mdc</code>): authorization, ownership (<code>request.user</code>), and password rules live <strong>only</strong> in Django. Next.js is a thin API client — if a new feature "needs" to check permissions in the frontend, that's a sign the real check is missing in the backend.</p>
     </div>
   </section>
 
   <section class="card anchor-offset" id="docker">
-    <h2>9. Docker &amp; Docker Compose — escopo exato de cada arquivo</h2>
-    <p class="lede">Existem três Dockerfiles/compose neste monorepo. É fácil imaginar que tudo isso vai para a AWS — <strong>não vai</strong>. Só uma peça (a imagem do backend) atravessa para produção; o resto é ferramenta de desenvolvimento local.</p>
+    <h2>9. Docker &amp; Docker Compose — exact scope of each file</h2>
+    <p class="lede">There are three Dockerfiles/compose files in this monorepo. It's easy to assume all of it goes to AWS — <strong>it doesn't</strong>. Only one piece (the backend image) makes it to production; the rest is a local development tool.</p>
 
     <table>
-      <tr><th>Arquivo</th><th>Usado em produção/AWS?</th><th>Papel</th></tr>
-      <tr><td><code>backend/Dockerfile</code></td><td><strong>Sim</strong> — é a <em>mesma</em> imagem</td><td>Build único (<code>python:3.12-slim</code> + <code>gunicorn</code> via <code>scripts/entrypoint.sh</code>) usado tanto pelo <code>docker compose up</code> local quanto pelo <code>docker build</code> do <code>deploy.yml</code>, que empurra essa mesma imagem para o ECR (<code>:sha</code> e <code>:latest</code>) e o ECS Fargate a executa em staging/prod.</td></tr>
-      <tr><td><code>backend/docker-compose.yml</code></td><td><strong>Não</strong> — só dev local</td><td>Orquestra 3 serviços (<code>db</code>, <code>api</code>, <code>web</code>) para rodar o stack inteiro na máquina do desenvolvedor. Nunca é referenciado por nenhum workflow de CI/CD nem existe equivalente em produção — o ECS Fargate não usa Compose, cada serviço é uma <code>task definition</code> Terraform separada.</td></tr>
-      <tr><td><code>frontend/Dockerfile</code> (+ <code>nginx.conf</code>)</td><td><strong>Não</strong> — só dev local, dentro do Compose</td><td>Build multi-stage: <code>node:20-alpine</code> compila (<code>next build</code> → export estático em <code>/app/out</code>) e um estágio final <code>nginx:alpine</code> serve esses arquivos estáticos na porta 3000, só para o serviço <code>web</code> do Compose. Em staging/prod o mesmo <code>next build</code> (export estático) é servido diretamente do <strong>S3 + CloudFront</strong> — não existe container, EC2 ou nginx nenhum rodando o frontend na AWS.</td></tr>
+      <tr><th>File</th><th>Used in production/AWS?</th><th>Role</th></tr>
+      <tr><td><code>backend/Dockerfile</code></td><td><strong>Yes</strong> — it's the <em>same</em> image</td><td>A single build (<code>python:3.12-slim</code> + <code>gunicorn</code> via <code>scripts/entrypoint.sh</code>) used both by local <code>docker compose up</code> and by <code>deploy.yml</code>'s <code>docker build</code>, which pushes this same image to ECR (<code>:sha</code> and <code>:latest</code>) and ECS Fargate runs it in staging/prod.</td></tr>
+      <tr><td><code>backend/docker-compose.yml</code></td><td><strong>No</strong> — local dev only</td><td>Orchestrates 3 services (<code>db</code>, <code>api</code>, <code>web</code>) to run the whole stack on the developer's machine. Never referenced by any CI/CD workflow and has no production equivalent — ECS Fargate doesn't use Compose, each service is a separate Terraform <code>task definition</code>.</td></tr>
+      <tr><td><code>frontend/Dockerfile</code> (+ <code>nginx.conf</code>)</td><td><strong>No</strong> — local dev only, inside Compose</td><td>Multi-stage build: <code>node:20-alpine</code> compiles (<code>next build</code> → static export in <code>/app/out</code>) and a final <code>nginx:alpine</code> stage serves those static files on port 3000, only for Compose's <code>web</code> service. In staging/prod the same <code>next build</code> (static export) is served directly from <strong>S3 + CloudFront</strong> — there's no container, EC2 instance, or nginx running the frontend on AWS.</td></tr>
     </table>
 
     <div class="diagram-box">
       <pre class="mermaid">
 flowchart LR
-  subgraph LOCAL["Desenvolvimento local — docker compose up --build"]
+  subgraph LOCAL["Local development — docker compose up --build"]
     direction LR
     DB["db<br/>postgres:16-alpine<br/>:5434→5432"]
     API_L["api<br/>build: backend/Dockerfile<br/>:8000→8000"]
@@ -802,32 +802,32 @@ flowchart LR
     WEB_L --> API_L
   end
 
-  subgraph AWS_ENV["AWS (staging/prod) — sem Compose"]
+  subgraph AWS_ENV["AWS (staging/prod) — no Compose"]
     direction LR
-    IMG["backend/Dockerfile<br/>(a mesma imagem)"] -->|"docker build + push"| ECRX["ECR"]
-    ECRX --> ECSX["ECS Fargate<br/>task definition Terraform"]
+    IMG["backend/Dockerfile<br/>(the same image)"] -->|"docker build + push"| ECRX["ECR"]
+    ECRX --> ECSX["ECS Fargate<br/>Terraform task definition"]
     ECSX --> RDSX[("RDS Postgres")]
-    NEXT["frontend: next build<br/>(export estático, sem Docker)"] -->|"aws s3 sync"| S3X["S3"]
+    NEXT["frontend: next build<br/>(static export, no Docker)"] -->|"aws s3 sync"| S3X["S3"]
     S3X --> CFX["CloudFront"]
   end
 
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
   class DB,API_L,WEB_L,IMG,ECRX,ECSX,RDSX,NEXT,S3X,CFX live;
       </pre>
-      <div class="caption">Fig. 8 — <code>docker-compose.yml</code> e o <code>Dockerfile</code> do frontend existem só à esquerda (laptop do desenvolvedor). Na AWS, apenas a imagem do <code>backend/Dockerfile</code> sobrevive — o frontend vira arquivos estáticos em S3/CloudFront.</div>
+      <div class="caption">Fig. 8 — <code>docker-compose.yml</code> and the frontend <code>Dockerfile</code> only exist on the left side (the developer's laptop). On AWS, only the <code>backend/Dockerfile</code> image survives — the frontend becomes static files on S3/CloudFront.</div>
     </div>
 
-    <h3>Comandos locais (idênticos aos citados na seção 8)</h3>
+    <h3>Local commands (identical to those in section 8)</h3>
     <pre><code>cd backend
 cp .env.example .env
 docker compose up --build
-# api      → http://localhost:8000   (Swagger em /api/docs/)
-# web      → http://localhost:3000   (nginx servindo o export do Next.js)
-# db       → localhost:5434          (dentro da rede compose: db:5432)</code></pre>
+# api      → http://localhost:8000   (Swagger at /api/docs/)
+# web      → http://localhost:3000   (nginx serving the Next.js export)
+# db       → localhost:5434          (inside the compose network: db:5432)</code></pre>
 
     <div class="callout">
-      <div class="callout-title">ℹ️ Por que o frontend não usa container na AWS</div>
-      <p>O Next.js do projeto roda em modo <code>output: "export"</code> (site 100% estático, sem SSR/API routes) — não há nada em runtime que exija Node.js rodando. Por isso o Terraform aponta para <strong>S3 + CloudFront</strong> em vez de outro serviço ECS: é mais barato, sem servidor para corrigir/atualizar, e a <code>aws_cloudfront_function.web_spa_rewrite</code> resolve o roteamento client-side que o nginx local faz via <code>nginx.conf</code>.</p>
+      <div class="callout-title">ℹ️ Why the frontend doesn't use a container on AWS</div>
+      <p>The project's Next.js runs in <code>output: "export"</code> mode (a 100% static site, no SSR/API routes) — there's nothing at runtime that requires Node.js to be running. That's why Terraform points to <strong>S3 + CloudFront</strong> instead of another ECS service: it's cheaper, has no server to patch/update, and <code>aws_cloudfront_function.web_spa_rewrite</code> handles the client-side routing that local nginx does via <code>nginx.conf</code>.</p>
     </div>
   </section>
 
@@ -835,8 +835,8 @@ docker compose up --build
 </div>
 
 <footer>
-  <p><strong>Fontes verificadas para este documento:</strong> código-fonte de <code>backend/</code> e <code>frontend/</code> (settings, views, models, urls, <code>docker-compose.yml</code>, <code>package.json</code>), todo o Terraform em <code>backend/terraform/</code>, os workflows <code>.github/workflows/*.yml</code> dos dois repositórios, <code>backend/mcp/server.py</code> + <code>tools/db_env.py</code> + <code>config.py</code>, <code>.cursor/skills/*/SKILL.md</code>, e <code>docs/process/00-MASTER-PLAN.md</code>, <code>04-github-secrets.md</code>, <code>05-aws-iam-setup.md</code>, <code>06-staging-deploy.md</code>, <code>07-security-audit.md</code>, <code>10-csrf-cross-origin-fix.md</code>. Nenhum recurso, secret ou comportamento de workflow foi inventado; onde a realidade diverge do plano original (ex.: App Runner → ECS Fargate, branch protection incompleta), isso está sinalizado explicitamente nos boxes de atenção acima.</p>
-  <p>Gerado em 2026-08-09. Diagramas renderizados com <a href="https://mermaid.js.org/" target="_blank" rel="noopener">Mermaid.js</a> (cópia local em <code>vendor/mermaid.min.js</code>, com fallback para CDN).</p>
+  <p><strong>Sources verified for this document:</strong> source code of <code>backend/</code> and <code>frontend/</code> (settings, views, models, urls, <code>docker-compose.yml</code>, <code>package.json</code>), all Terraform in <code>backend/terraform/</code>, the <code>.github/workflows/*.yml</code> workflows of both repositories, <code>backend/mcp/server.py</code> + <code>tools/db_env.py</code> + <code>config.py</code>, <code>.cursor/skills/*/SKILL.md</code>, and <code>docs/process/00-MASTER-PLAN.md</code>, <code>04-github-secrets.md</code>, <code>05-aws-iam-setup.md</code>, <code>06-staging-deploy.md</code>, <code>07-security-audit.md</code>, <code>10-csrf-cross-origin-fix.md</code>. No resource, secret, or workflow behavior was invented; where reality diverges from the original plan (e.g., App Runner → ECS Fargate, incomplete branch protection), that is explicitly flagged in the warning boxes above.</p>
+  <p>Generated on 2026-08-09. Diagrams rendered with <a href="https://mermaid.js.org/" target="_blank" rel="noopener">Mermaid.js</a> (local copy at <code>vendor/mermaid.min.js</code>, with CDN fallback).</p>
 </footer>
 
 <script>
