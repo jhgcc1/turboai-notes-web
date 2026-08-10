@@ -318,47 +318,151 @@
   .path-card ul { margin: 0; padding-left: 1.1rem; font-size: .84rem; }
   .path-card li { margin-bottom: .2rem; }
 
-  .pipeline {
+  /* Deploy swimlanes: shared gates → API | Web columns */
+  .deploy-flow {
+    margin: 1rem 0 .5rem;
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    background: #fff;
+    overflow: hidden;
+  }
+  .deploy-gates {
     display: flex;
     flex-wrap: wrap;
     align-items: stretch;
-    gap: .45rem;
-    margin: .9rem 0;
+    justify-content: center;
+    gap: .4rem;
+    padding: .85rem 1rem;
+    background: linear-gradient(180deg, #f7efe4, #fffaf1);
+    border-bottom: 1px solid var(--card-border);
   }
-  .pipe-step {
-    flex: 1 1 100px;
-    min-width: 95px;
-    max-width: 160px;
+  .deploy-gate {
+    flex: 1 1 120px;
+    max-width: 200px;
     background: #fff;
     border: 1px solid var(--card-border);
+    border-top: 4px solid var(--live);
     border-radius: 10px;
-    padding: .55rem .65rem;
-    font-size: .78rem;
+    padding: .5rem .65rem;
+    font-size: .8rem;
     line-height: 1.3;
+    text-align: center;
   }
-  .pipe-step strong {
+  .deploy-gate strong {
     display: block;
     font-family: var(--font-display);
-    font-size: .85rem;
-    margin-bottom: .2rem;
-    color: #3e2723;
+    font-size: .88rem;
+    margin-bottom: .15rem;
+    color: #1f3a52;
   }
-  .pipe-step.api { border-top: 4px solid var(--random); }
-  .pipe-step.web { border-top: 4px solid var(--personal); }
-  .pipe-step.shared { border-top: 4px solid var(--live); }
-  .pipe-step.tf { border-top: 4px solid #a5623f; }
-  .pipe-arrow {
+  .deploy-gate-arrow {
     display: flex;
     align-items: center;
     color: var(--muted);
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 1.1rem;
     flex: 0 0 auto;
+  }
+  .deploy-lanes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    min-width: 0;
+  }
+  .deploy-lane {
+    padding: .9rem 1rem 1rem;
+    min-width: 0;
+  }
+  .deploy-lane + .deploy-lane {
+    border-left: 1px solid var(--card-border);
+  }
+  .deploy-lane.api { background: #fffaf6; }
+  .deploy-lane.web { background: #f6faf8; }
+  .deploy-lane-title {
+    margin: 0 0 .65rem;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+  }
+  .deploy-lane.api .deploy-lane-title { color: #7a4429; }
+  .deploy-lane.web .deploy-lane-title { color: #2a4f3f; }
+  .lane-tag {
+    display: inline-block;
+    font-family: var(--font-body);
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    padding: .15rem .45rem;
+    border-radius: 6px;
+  }
+  .deploy-lane.api .lane-tag {
+    background: #fdf0dd;
+    color: #7a4429;
+    border: 1px solid var(--random);
+  }
+  .deploy-lane.web .lane-tag {
+    background: #eaf3f0;
+    color: #2a4f3f;
+    border: 1px solid var(--personal);
+  }
+  .deploy-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    counter-reset: step;
+  }
+  .deploy-steps li {
+    position: relative;
+    margin: 0 0 .45rem;
+    padding: .55rem .7rem .55rem 2.4rem;
+    background: #fff;
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    font-size: .84rem;
+    line-height: 1.35;
+  }
+  .deploy-steps li::before {
+    counter-increment: step;
+    content: counter(step);
+    position: absolute;
+    left: .55rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .72rem;
+    font-weight: 700;
+    color: #fff;
+  }
+  .deploy-lane.api .deploy-steps li::before { background: #a5623f; }
+  .deploy-lane.web .deploy-steps li::before { background: #5f8f7a; }
+  .deploy-steps li strong {
+    display: block;
+    font-family: var(--font-display);
+    font-size: .9rem;
+    margin-bottom: .1rem;
+    color: #3e2723;
+  }
+  .deploy-steps li:last-child { margin-bottom: 0; }
+  .deploy-note {
+    margin: .55rem 0 0;
+    font-size: .78rem;
+    color: var(--muted);
+    font-style: italic;
   }
   @media (max-width: 700px) {
     .path-compare { grid-template-columns: 1fr; }
-    .pipe-arrow { display: none; }
-    .pipe-step { max-width: none; flex: 1 1 100%; }
+    .deploy-lanes { grid-template-columns: 1fr; }
+    .deploy-lane + .deploy-lane { border-left: none; border-top: 1px solid var(--card-border); }
+    .deploy-gate-arrow { display: none; }
+    .deploy-gate { max-width: none; }
   }
 
   .origin-pair {
@@ -767,67 +871,98 @@ flowchart LR
   <!-- ========== 2. CI/CD ========== -->
   <section class="card anchor-offset" id="cicd">
     <h2>2. CI / CD</h2>
-    <p class="lede">Three workflows per repo: <code>ci.yml</code>, <code>deploy.yml</code>, <code>ai-review.yml</code>. Only the API repo runs Terraform.</p>
+    <p class="lede">Three workflows per repo: <code>ci.yml</code>, <code>deploy.yml</code>, <code>ai-review.yml</code>. API CI fails on missing migrations; apply happens on ECS task start. Only the API repo runs Terraform.</p>
 
     <div class="path-compare">
       <div class="path-card staging">
         <h4>■ Staging</h4>
         <p><strong>Trigger:</strong> merge to <code>develop</code></p>
         <ul>
-          <li>Environment <code>staging</code></li>
-          <li>TF: <code>terraform/envs/staging</code> (API)</li>
-          <li>API + web deploy in parallel</li>
+          <li>Environment <code>staging</code> (no reviewers)</li>
+          <li>API TF: <code>terraform/envs/staging</code></li>
+          <li>API + web ship together</li>
         </ul>
       </div>
       <div class="path-card prod">
         <h4>■ Prod</h4>
-        <p><strong>Trigger:</strong> published Release (not merge alone)</p>
+        <p><strong>Trigger:</strong> published Release (+ reviewers)</p>
         <ul>
-          <li>Environment <code>prod</code> (reviewers)</li>
-          <li>TF: <code>terraform/envs/prod</code> (API)</li>
+          <li>Environment <code>prod</code> (approval required)</li>
+          <li>API TF: <code>terraform/envs/prod</code></li>
           <li>First live 2026-08-10</li>
         </ul>
       </div>
     </div>
 
-    <div class="pipeline" aria-label="Deploy pipeline">
-      <div class="pipe-step shared"><strong>1. Secrets</strong>GH Secrets → job</div>
-      <div class="pipe-arrow" aria-hidden="true">→</div>
-      <div class="pipe-step shared"><strong>2. CI</strong><code>needs: ci</code></div>
-      <div class="pipe-arrow" aria-hidden="true">→</div>
-      <div class="pipe-step shared"><strong>3. OIDC</strong>assume deploy role</div>
-      <div class="pipe-arrow" aria-hidden="true">→</div>
-      <div class="pipe-step api"><strong>4a. ECR</strong>build/push image</div>
-      <div class="pipe-arrow" aria-hidden="true">→</div>
-      <div class="pipe-step tf"><strong>4b. TF</strong>stack + observability</div>
-      <div class="pipe-arrow" aria-hidden="true">→</div>
-      <div class="pipe-step api"><strong>5a. ECS</strong>force new deploy</div>
-      <div class="pipe-arrow" aria-hidden="true">→</div>
-      <div class="pipe-step web"><strong>5b. Web</strong>S3 sync + CF invalidate</div>
-    </div>
+    <div class="deploy-flow" aria-label="Deploy paths: shared gates then API vs Web">
+      <div class="deploy-gates">
+        <div class="deploy-gate">
+          <strong>GH Secrets</strong>
+          role ARN, DB/Django keys, URLs
+        </div>
+        <div class="deploy-gate-arrow" aria-hidden="true">→</div>
+        <div class="deploy-gate">
+          <strong>CI</strong>
+          quality + API <code>makemigrations --check</code>
+        </div>
+        <div class="deploy-gate-arrow" aria-hidden="true">→</div>
+        <div class="deploy-gate">
+          <strong>OIDC</strong>
+          assume <code>turboai-notes-github-actions</code>
+        </div>
+      </div>
 
-    <div class="diagram-box">
-      <pre class="mermaid">
-flowchart TB
-  TRIG["develop push · Release · dispatch"] --> CI["ci.yml quality"]
-  CI --> OIDC["OIDC → turboai-notes-github-actions"]
-  OIDC --> API["API: ECR → terraform apply → ECS"]
-  OIDC --> WEB["Web: next build → S3 → CloudFront"]
-  API --> SMOKEA["smoke /api/health/"]
-  WEB --> SMOKEW["smoke WEB_URL"]
-
-  classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
-  classDef api fill:#fdf0dd,stroke:#a5623f,stroke-width:1.5px,color:#3e2723;
-  classDef web fill:#eaf3f0,stroke:#5f8f7a,stroke-width:1.5px,color:#1f3b2b;
-  class TRIG,CI,OIDC live;
-  class API,SMOKEA api;
-  class WEB,SMOKEW web;
-      </pre>
-      <div class="caption">API owns Terraform (incl. triage Lambda zip via <code>archive_file</code> ~43&nbsp;KB). Web consumes TF-output secrets only.</div>
+      <div class="deploy-lanes">
+        <div class="deploy-lane api">
+          <h3 class="deploy-lane-title"><span class="lane-tag">API</span> turboai-notes-api</h3>
+          <ol class="deploy-steps">
+            <li>
+              <strong>Build &amp; push ECR</strong>
+              Docker image → env repository
+            </li>
+            <li>
+              <strong>Terraform apply</strong>
+              stack + triage Lambda zip (<code>archive_file</code>)
+            </li>
+            <li>
+              <strong>ECS force deploy</strong>
+              new tasks → entrypoint <code>migrate --noinput</code>
+            </li>
+            <li>
+              <strong>Smoke</strong>
+              <code>/api/health/</code>
+            </li>
+          </ol>
+          <p class="deploy-note">Migrate runs on task start (staging + prod), not in the CI unit-test job.</p>
+        </div>
+        <div class="deploy-lane web">
+          <h3 class="deploy-lane-title"><span class="lane-tag">Web</span> turboai-notes-web</h3>
+          <ol class="deploy-steps">
+            <li>
+              <strong>Next export</strong>
+              <code>next build</code> static output
+            </li>
+            <li>
+              <strong>S3 sync</strong>
+              upload site bucket
+            </li>
+            <li>
+              <strong>CloudFront invalidate</strong>
+              purge CDN cache
+            </li>
+            <li>
+              <strong>Smoke</strong>
+              hit <code>WEB_URL</code>
+            </li>
+          </ol>
+          <p class="deploy-note">No Terraform / no migrations — static site only; bucket from API stack.</p>
+        </div>
+      </div>
     </div>
+    <div class="caption">Shared: Secrets → CI (incl. migration <em>check</em>) → OIDC. API: ECR → TF → ECS (entrypoint <em>apply</em>). Web: export → S3 → CloudFront.</div>
 
     <details class="fold">
-      <summary>Pipeline secrets &amp; workflow tables</summary>
+      <summary>Pipeline secrets &amp; workflow YAML details</summary>
       <div class="table-wrap">
       <table class="tight">
         <tr><th>Input</th><th>Where</th><th>Becomes</th></tr>
@@ -841,8 +976,8 @@ flowchart TB
       <div class="table-wrap">
       <table class="tight">
         <tr><th>Workflow</th><th>Does</th></tr>
-        <tr><td><code>ci.yml</code></td><td>ruff, mypy (non-blocking), pytest 100% on <code>apps/</code></td></tr>
-        <tr><td><code>deploy.yml</code></td><td>OIDC → ECR → TF apply → ECS force-deploy → smoke</td></tr>
+        <tr><td><code>ci.yml</code></td><td>ruff, mypy (non-blocking), <code>makemigrations --check --dry-run</code>, pytest 100% on <code>apps/</code></td></tr>
+        <tr><td><code>deploy.yml</code></td><td>OIDC → ECR → TF apply (incl. Lambda zip) → ECS force-deploy → entrypoint <code>migrate --noinput</code> → smoke</td></tr>
         <tr><td><code>ai-review.yml</code></td><td>Regex heuristics only — no LLM</td></tr>
       </table>
       </div>
@@ -851,7 +986,7 @@ flowchart TB
       <table class="tight">
         <tr><th>Workflow</th><th>Does</th></tr>
         <tr><td><code>ci.yml</code></td><td>prettier, eslint, tsc, vitest 100% on <code>src/</code></td></tr>
-        <tr><td><code>deploy.yml</code></td><td>No TF · <code>next build</code> → S3 → CF invalidate</td></tr>
+        <tr><td><code>deploy.yml</code></td><td>No TF · <code>next build</code> → S3 sync → CloudFront invalidate</td></tr>
         <tr><td><code>ai-review.yml</code></td><td>Regex: localStorage tokens, auth in FE, etc.</td></tr>
       </table>
       </div>
