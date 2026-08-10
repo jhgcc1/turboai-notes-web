@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { NoteEditor } from "./NoteEditor";
 import { api } from "@/lib/api";
 
+const reportUnexpected = vi.hoisted(() => vi.fn());
+
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
   return {
@@ -14,6 +16,10 @@ vi.mock("@/lib/api", async () => {
     },
   };
 });
+
+vi.mock("@/lib/reportUnexpected", () => ({
+  reportUnexpected: (...args: unknown[]) => reportUnexpected(...args),
+}));
 
 const categories = [
   { id: 1, name: "Random Thoughts", color: "#E9A680", note_count: 1, created_at: "" },
@@ -121,9 +127,25 @@ describe("NoteEditor", () => {
 
   it("redirects to /login when the initial fetch fails", async () => {
     const hrefSetter = stubLocation();
+    reportUnexpected.mockClear();
     vi.mocked(api.getNote).mockRejectedValue(new Error("not found"));
     render(<NoteEditor noteId={10} />);
     await waitFor(() => expect(hrefSetter).toHaveBeenCalledWith("/login"));
+    expect(reportUnexpected).toHaveBeenCalledWith(expect.any(Error), "NoteEditor.load");
+  });
+
+  it("reports save failures", async () => {
+    const user = userEvent.setup();
+    reportUnexpected.mockClear();
+    vi.mocked(api.updateNote).mockRejectedValue(new Error("save failed"));
+    render(<NoteEditor noteId={10} />);
+    const title = await screen.findByDisplayValue("First note");
+    await user.clear(title);
+    await user.type(title, "X");
+    await user.tab();
+    await waitFor(() =>
+      expect(reportUnexpected).toHaveBeenCalledWith(expect.any(Error), "NoteEditor.save"),
+    );
   });
 
   it("falls back to the note's own color when its category is missing", async () => {

@@ -19,7 +19,8 @@ const MIN_INTERVAL_MS = 2_000;
 
 /**
  * POST a client error to the API so it becomes a structured backend ERROR log
- * (CloudWatch → triage Lambda → MiniMax → Jira). Never throws.
+ * (CloudWatch → triage Lambda → MiniMax → Jira). The browser never calls an
+ * LLM — only the triage Lambda does. Never throws.
  */
 export async function reportClientError(payload: ClientErrorPayload): Promise<void> {
   if (typeof window === "undefined") return;

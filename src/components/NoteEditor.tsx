@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { api, Category, formatLastEdited, Note } from "@/lib/api";
+import { reportUnexpected } from "@/lib/reportUnexpected";
 
 export function NoteEditor({ noteId }: { noteId: number }) {
   const [note, setNote] = useState<Note | null>(null);
@@ -23,7 +24,8 @@ export function NoteEditor({ noteId }: { noteId: number }) {
         setTitle(n.title);
         setBody(n.body);
         setCategory(n.category);
-      } catch {
+      } catch (err) {
+        reportUnexpected(err, "NoteEditor.load");
         window.location.href = "/login";
       }
     })();
@@ -44,6 +46,8 @@ export function NoteEditor({ noteId }: { noteId: number }) {
         ...next,
       });
       setNote(updated);
+    } catch (err) {
+      reportUnexpected(err, "NoteEditor.save");
     } finally {
       setSaving(false);
     }

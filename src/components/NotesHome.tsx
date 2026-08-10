@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyNotesState } from "@/components/EmptyNotesState";
 import { api, Category, formatNoteDate, Note } from "@/lib/api";
+import { reportUnexpected } from "@/lib/reportUnexpected";
 
 export function NotesHome() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -20,7 +21,8 @@ export function NotesHome() {
           setCategories(cats);
           setNotes(ns);
         }
-      } catch {
+      } catch (err) {
+        reportUnexpected(err, "NotesHome.load");
         if (!cancelled) window.location.href = "/login";
       }
     })();
@@ -34,8 +36,12 @@ export function NotesHome() {
   async function onNewNote() {
     const cat = filter ? categories.find((c) => c.id === filter) : categories[0];
     if (!cat) return;
-    const note = await api.createNote({ title: "Note Title", body: "", category: cat.id });
-    window.location.href = `/notes/edit/?id=${note.id}`;
+    try {
+      const note = await api.createNote({ title: "Note Title", body: "", category: cat.id });
+      window.location.href = `/notes/edit/?id=${note.id}`;
+    } catch (err) {
+      reportUnexpected(err, "NotesHome.createNote");
+    }
   }
 
   return (

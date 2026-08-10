@@ -65,11 +65,19 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const csrfToken = await ensureCsrfToken();
     if (csrfToken) headers.set("X-CSRFToken", csrfToken);
   }
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers,
-    credentials: "include",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers,
+      credentials: "include",
+    });
+  } catch (err) {
+    // Network / CORS failures — rethrow as Error with stack for catch sites
+    // that call reportUnexpected (no LLM calls from the browser).
+    const message = err instanceof Error ? err.message : "Network request failed";
+    throw new Error(message, { cause: err });
+  }
   if (res.status === 204) {
     return undefined as T;
   }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { ApiError, api } from "@/lib/api";
+import { reportUnexpected } from "@/lib/reportUnexpected";
 import { AuthDecorations } from "@/components/AuthDecorations";
 
 type Mode = "login" | "signup";
@@ -27,6 +28,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       }
       window.location.href = "/";
     } catch (err) {
+      reportUnexpected(err, "AuthForm.submit");
       if (err instanceof ApiError) {
         setError("Something went wrong. Check your email and password.");
       } else {
