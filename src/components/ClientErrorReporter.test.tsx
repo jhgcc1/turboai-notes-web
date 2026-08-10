@@ -3,10 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ClientErrorReporter } from "./ClientErrorReporter";
 
-const reportClientError = vi.fn(async () => undefined);
+const reportClientError = vi.fn(async (_payload?: unknown) => undefined);
 
 vi.mock("@/lib/clientError", () => ({
-  reportClientError: (...args: unknown[]) => reportClientError(...args),
+  reportClientError: (payload: unknown) => reportClientError(payload),
 }));
 
 describe("ClientErrorReporter", () => {

@@ -60,7 +60,7 @@ describe("reportClientError", () => {
     });
     const arg = vi.mocked(api.reportClientError).mock.calls[0][0];
     expect(arg.message.length).toBe(2000);
-    expect(arg.stack.length).toBe(8000);
+    expect(arg.stack ?? "").toHaveLength(8000);
   });
 
   it("no-ops when window is undefined", async () => {
