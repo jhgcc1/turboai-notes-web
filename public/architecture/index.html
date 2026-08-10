@@ -628,7 +628,7 @@ flowchart TB
       <tr><td><code>AWS_ROLE_ARN</code></td><td><span class="badge gh">GitHub Secrets</span> (both repos + Environments)</td><td>API + web <code>deploy.yml</code></td><td>OIDC assume-role only — never an app env var</td></tr>
       <tr><td><code>DB_PASSWORD</code>, <code>DJANGO_SECRET_KEY</code></td><td><span class="badge gh">GitHub Secrets</span> (api repo)</td><td>API Terraform as <code>TF_VAR_*</code></td><td>RDS master password + <span class="badge sm">Secrets Manager</span> → ECS <code>secrets:</code> block</td></tr>
       <tr><td><code>API_URL</code>, <code>WEB_BUCKET</code>, <code>CLOUDFRONT_ID</code>, <code>WEB_URL</code></td><td><span class="badge gh">GitHub Secrets</span> (web repo; filled from API TF outputs)</td><td>web <code>deploy.yml</code> only</td><td>Build-time <code>NEXT_PUBLIC_API_URL</code>, S3 sync target, CF invalidation, smoke URL</td></tr>
-      <tr><td>MiniMax / Jira credentials</td><td><span class="badge sm">Secrets Manager</span> placeholders from observability module</td><td>triage Lambda at runtime</td><td><strong>Not</strong> in GitHub Actions — operator <code>put-secret-value</code> out of band</td></tr>
+      <tr><td>MiniMax / Jira credentials</td><td><span class="badge sm">Secrets Manager</span> only — <strong>not in GitHub</strong> (<a href="#sm-only-rationale">rationale</a>)</td><td>triage Lambda at runtime</td><td>Operator <code>put-secret-value</code> out of band — no GH → SM sync</td></tr>
     </table>
     </div>
 
@@ -948,6 +948,18 @@ flowchart TB
       <div><span class="badge local">Local only</span> developer / operator disk — never GitHub</div>
     </div>
 
+    <div class="callout info" id="sm-only-rationale">
+      <div class="callout-title">ℹ️ Why MiniMax and Jira stay Secrets Manager–only</div>
+      <p>Decision: keep MiniMax and Jira tokens <strong>only</strong> in AWS Secrets Manager — do <strong>not</strong> add a GitHub Actions → Secrets Manager sync for them.</p>
+      <ul>
+        <li>Terraform creates SM placeholders with <code>ignore_changes</code> on <code>secret_string</code>, so deploy applies never overwrite live API tokens with <code>REPLACE_ME</code>.</li>
+        <li>Values are set out-of-band via <code>aws secretsmanager put-secret-value</code> (operator / break-glass) — not <code>TF_VAR_*</code> and not GitHub Secrets.</li>
+        <li>Only the triage Lambda reads them at runtime; Django and the static frontend never see MiniMax or Jira.</li>
+        <li>Reduces blast radius vs also storing third-party API tokens in GitHub (simpler rotation; fewer places that hold the value).</li>
+      </ul>
+      <p><strong>Contrast:</strong> <code>DJANGO_SECRET_KEY</code> and <code>DB_PASSWORD</code> must be available to Terraform at apply time (RDS master password + SM write for ECS), so those correctly flow GitHub Secrets → Terraform → Secrets Manager → ECS. MiniMax/Jira are not needed at apply time, so they stay SM-only.</p>
+    </div>
+
     <h3>Full inventory</h3>
     <div class="table-wrap">
     <table class="tight">
@@ -1002,19 +1014,19 @@ flowchart TB
       </tr>
       <tr>
         <td>MiniMax / LLM credentials<br/><code>turboai-notes-{env}-llm-credentials</code></td>
-        <td><span class="badge sm">Secrets Manager</span> only (Terraform placeholder + operator <code>put-secret-value</code>)</td>
+        <td><span class="badge sm">Secrets Manager</span> only — <strong>not in GitHub</strong> (<a href="#sm-only-rationale">rationale</a>; TF placeholder + operator <code>put-secret-value</code>)</td>
         <td><strong>Triage Lambda only</strong> (<code>LLM_SECRET_ID</code> → <code>GetSecretValue</code>). Django ECS and the Next.js SPA <strong>never</strong> call MiniMax / any LLM.</td>
         <td>Secret exists; <code>api_key</code> populated</td>
         <td>Secret exists; value still Terraform <code>REPLACE_ME</code> placeholder until populated</td>
-        <td>JSON keys: <code>api_key</code>, <code>base_url</code>, <code>model</code>. <strong>Not</strong> in GitHub Actions. IAM read granted only to the triage role. Values in the secret override Lambda env defaults for base URL / model.</td>
+        <td>JSON keys: <code>api_key</code>, <code>base_url</code>, <code>model</code>. SM only — not in GitHub (see <a href="#sm-only-rationale">rationale</a>). IAM read granted only to the triage role. Values in the secret override Lambda env defaults for base URL / model.</td>
       </tr>
       <tr>
         <td>Jira credentials<br/><code>turboai-notes-{env}-jira-credentials</code></td>
-        <td><span class="badge sm">Secrets Manager</span> (created only when <code>jira_enabled=true</code>)</td>
+        <td><span class="badge sm">Secrets Manager</span> only — <strong>not in GitHub</strong> (<a href="#sm-only-rationale">rationale</a>; created when <code>jira_enabled=true</code>)</td>
         <td>Triage Lambda only (<code>JIRA_SECRET_ID</code>) when <code>JIRA_ENABLED=true</code></td>
         <td><strong>Enabled</strong> — secret exists and is populated; project <code>KAN</code></td>
         <td><strong>Disabled</strong> — <code>jira_enabled=false</code>; <strong>no</strong> <code>turboai-notes-prod-jira-credentials</code> secret</td>
-        <td>JSON keys: <code>base_url</code>, <code>email</code>, <code>api_token</code>. Out-of-band <code>put-secret-value</code>; never in GH or Lambda plaintext env. Staging default in <code>envs/staging/main.tf</code>; prod default false in <code>envs/prod/main.tf</code>.</td>
+        <td>JSON keys: <code>base_url</code>, <code>email</code>, <code>api_token</code>. SM only — not in GitHub (see <a href="#sm-only-rationale">rationale</a>). Out-of-band <code>put-secret-value</code>; never in Lambda plaintext env. Staging default in <code>envs/staging/main.tf</code>; prod default false in <code>envs/prod/main.tf</code>.</td>
       </tr>
       <tr>
         <td>Bastion SSH private key<br/>(e.g. <code>~/turbo-notes-bastion.pem</code>)</td>
@@ -1096,11 +1108,11 @@ flowchart TB
       </tr>
     </table>
     </div>
-    <p>Neither repo has GitHub Actions <strong>variables</strong> (only secrets). MiniMax and Jira credentials are intentionally absent from GitHub.</p>
+    <p>Neither repo has GitHub Actions <strong>variables</strong> (only secrets). MiniMax and Jira credentials are intentionally absent from GitHub — <a href="#sm-only-rationale">SM only, not the GH → TF → SM two-hop</a>.</p>
 
     <div class="callout">
-      <div class="callout-title">ℹ️ The "two-hop" path for secrets is intentional</div>
-      <p>Quoting <code>docs/process/07-security-audit.md</code>: <em>"GitHub Secrets remains the source of truth Terraform reads from at apply time; Secrets Manager is what the running ECS task reads at container start; this two-hop path is intentional and standard for Terraform-managed secrets."</em> In other words: GitHub Secrets → Terraform apply (writes to RDS and Secrets Manager) → ECS task resolves from Secrets Manager at boot. The container never receives the secret via a plain environment variable.</p>
+      <div class="callout-title">ℹ️ The "two-hop" path for Django/DB secrets is intentional</div>
+      <p>Quoting <code>docs/process/07-security-audit.md</code>: <em>"GitHub Secrets remains the source of truth Terraform reads from at apply time; Secrets Manager is what the running ECS task reads at container start; this two-hop path is intentional and standard for Terraform-managed secrets."</em> That path applies to <code>DJANGO_SECRET_KEY</code> and <code>DB_PASSWORD</code> — Terraform needs them at apply time for RDS + ECS. Flow: GitHub Secrets → Terraform apply (writes to RDS and Secrets Manager) → ECS resolves from Secrets Manager at boot (never plaintext in the task definition). MiniMax/Jira use a different model: <a href="#sm-only-rationale">SM-only, not in GitHub</a>.</p>
     </div>
 
     <div class="callout warn">
