@@ -12,6 +12,7 @@ export function NoteEditor({ noteId }: { noteId: number }) {
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,6 +68,20 @@ export function NoteEditor({ noteId }: { noteId: number }) {
     void save();
   }
 
+  async function onDelete() {
+    /* v8 ignore next -- defensive: Delete is only rendered once note is loaded */
+    if (!note || deleting) return;
+    if (!window.confirm("Delete this note? This cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      await api.deleteNote(note.id);
+      window.location.href = "/";
+    } catch (err) {
+      reportUnexpected(err, "NoteEditor.delete");
+      setDeleting(false);
+    }
+  }
+
   if (!note || category == null) {
     return <main className="p-8">Loading…</main>;
   }
@@ -75,7 +90,7 @@ export function NoteEditor({ noteId }: { noteId: number }) {
 
   return (
     <main className="mx-auto min-h-screen max-w-4xl px-6 py-8">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between gap-3">
         <label className="inline-flex items-center gap-2 rounded-full border border-[var(--ink)] px-3 py-1">
           <span className="h-3 w-3 rounded-full" style={{ background: color }} />
           <select
@@ -91,9 +106,19 @@ export function NoteEditor({ noteId }: { noteId: number }) {
             ))}
           </select>
         </label>
-        <Link href="/" className="text-2xl leading-none" aria-label="Close">
-          ×
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void onDelete()}
+            disabled={deleting}
+            className="rounded-full border border-[var(--ink)] px-4 py-1.5 font-display text-sm text-[var(--muted)]"
+          >
+            {deleting ? "Deleting…" : "Delete"}
+          </button>
+          <Link href="/" className="text-2xl leading-none" aria-label="Close">
+            ×
+          </Link>
+        </div>
       </div>
       <form onSubmit={onSubmit} className="rounded-3xl p-8" style={{ background: color }}>
         <p className="mb-4 text-right text-sm text-[var(--ink)]">

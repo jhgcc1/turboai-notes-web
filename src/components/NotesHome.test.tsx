@@ -14,6 +14,7 @@ vi.mock("@/lib/api", async () => {
       categories: vi.fn(),
       notes: vi.fn(),
       createNote: vi.fn(),
+      logout: vi.fn(),
     },
   };
 });
@@ -209,5 +210,30 @@ describe("NotesHome", () => {
       expect(reportUnexpected).toHaveBeenCalledWith(expect.any(Error), "NotesHome.createNote"),
     );
     expect(hrefSetter).not.toHaveBeenCalled();
+  });
+
+  it("logs out and redirects to /login/", async () => {
+    const user = userEvent.setup();
+    const hrefSetter = stubLocation();
+    vi.mocked(api.logout).mockResolvedValue({ detail: "ok" });
+    render(<NotesHome />);
+    await screen.findByRole("button", { name: /Random Thoughts/ });
+    await user.click(screen.getByRole("button", { name: "Log out" }));
+    await waitFor(() => expect(api.logout).toHaveBeenCalled());
+    await waitFor(() => expect(hrefSetter).toHaveBeenCalledWith("/login/"));
+  });
+
+  it("still redirects to /login/ when logout fails", async () => {
+    const user = userEvent.setup();
+    const hrefSetter = stubLocation();
+    reportUnexpected.mockClear();
+    vi.mocked(api.logout).mockRejectedValue(new Error("logout failed"));
+    render(<NotesHome />);
+    await screen.findByRole("button", { name: /Random Thoughts/ });
+    await user.click(screen.getByRole("button", { name: "Log out" }));
+    await waitFor(() =>
+      expect(reportUnexpected).toHaveBeenCalledWith(expect.any(Error), "NotesHome.logout"),
+    );
+    await waitFor(() => expect(hrefSetter).toHaveBeenCalledWith("/login/"));
   });
 });

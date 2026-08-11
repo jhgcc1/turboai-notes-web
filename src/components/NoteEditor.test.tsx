@@ -13,6 +13,7 @@ vi.mock("@/lib/api", async () => {
       getNote: vi.fn(),
       categories: vi.fn(),
       updateNote: vi.fn(),
+      deleteNote: vi.fn(),
     },
   };
 });
@@ -166,5 +167,63 @@ describe("NoteEditor", () => {
     unmount();
     resolveNote();
     await new Promise((r) => setTimeout(r, 0));
+  });
+
+  it("deletes the note after confirm and navigates home", async () => {
+    const user = userEvent.setup();
+    const hrefSetter = stubLocation();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.mocked(api.deleteNote).mockResolvedValue(undefined);
+    render(<NoteEditor noteId={10} />);
+    await screen.findByDisplayValue("First note");
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await waitFor(() => expect(api.deleteNote).toHaveBeenCalledWith(10));
+    await waitFor(() => expect(hrefSetter).toHaveBeenCalledWith("/"));
+    confirmSpy.mockRestore();
+  });
+
+  it("shows deleting state while the request is in flight", async () => {
+    const user = userEvent.setup();
+    stubLocation();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    let resolveDelete!: () => void;
+    vi.mocked(api.deleteNote).mockReturnValue(
+      new Promise((resolve) => {
+        resolveDelete = () => resolve(undefined);
+      }),
+    );
+    render(<NoteEditor noteId={10} />);
+    await screen.findByDisplayValue("First note");
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    expect(await screen.findByRole("button", { name: "Deleting…" })).toBeDisabled();
+    resolveDelete();
+    confirmSpy.mockRestore();
+  });
+
+  it("does not delete when confirm is cancelled", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<NoteEditor noteId={10} />);
+    await screen.findByDisplayValue("First note");
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    expect(api.deleteNote).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it("reports delete failures and stays on the page", async () => {
+    const user = userEvent.setup();
+    const hrefSetter = stubLocation();
+    reportUnexpected.mockClear();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.mocked(api.deleteNote).mockRejectedValue(new Error("delete failed"));
+    render(<NoteEditor noteId={10} />);
+    await screen.findByDisplayValue("First note");
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await waitFor(() =>
+      expect(reportUnexpected).toHaveBeenCalledWith(expect.any(Error), "NoteEditor.delete"),
+    );
+    expect(hrefSetter).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled();
+    confirmSpy.mockRestore();
   });
 });

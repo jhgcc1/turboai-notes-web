@@ -50,6 +50,16 @@ export function NotesHome() {
     }
   }
 
+  async function onLogout() {
+    try {
+      await api.logout();
+    } catch (err) {
+      reportUnexpected(err, "NotesHome.logout");
+    } finally {
+      window.location.href = "/login/";
+    }
+  }
+
   if (authRedirect) {
     return (
       <main className="flex min-h-screen items-center justify-center px-4">
@@ -92,7 +102,14 @@ export function NotesHome() {
         </ul>
       </aside>
       <section className="flex-1">
-        <div className="mb-6 flex justify-end">
+        <div className="mb-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => void onLogout()}
+            className="rounded-full border border-[var(--ink)] px-4 py-2 font-display text-[var(--muted)]"
+          >
+            Log out
+          </button>
           <button
             type="button"
             onClick={onNewNote}
