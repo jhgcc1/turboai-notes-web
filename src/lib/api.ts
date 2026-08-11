@@ -34,7 +34,7 @@ export class ApiError extends Error {
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
 
-/** In-memory CSRF token from /api/auth/csrf/ (readable cross-origin; cookie is not). */
+/** In-memory CSRF token from /api/auth/csrf/ (also used when the cookie is httpOnly-unreadable). */
 let csrfTokenMemory: string | null = null;
 
 function getCookie(name: string): string | null {

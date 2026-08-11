@@ -862,19 +862,31 @@ flowchart LR
 
   subgraph STG["STAGING"]
     direction LR
-    CFW_S["CF web"] --> S3_S["S3"]
-    CFA_S["CF api"] --> ALB_S["ALB"] --> ECS_S["ECS"] --> RDS_S[("RDS")]
+    subgraph STG_FE["Frontend"]
+      direction LR
+      CFW_S["Frontend CDN<br/>CloudFront web"] --> S3_S["Static files (S3)<br/>Next.js"]
+    end
+    subgraph STG_BE["Backend API"]
+      direction LR
+      CFA_S["API CDN<br/>CloudFront api"] --> ALB_S["Load balancer (ALB)<br/>HTTP → API containers"] --> ECS_S["API containers<br/>ECS Fargate · Django"] --> RDS_S[("Postgres (RDS)")]
+    end
   end
 
   subgraph PRD["PROD"]
     direction LR
-    CFW_P["CF web"] --> S3_P["S3"]
-    CFA_P["CF api"] --> ALB_P["ALB"] --> ECS_P["ECS"] --> RDS_P[("RDS")]
+    subgraph PRD_FE["Frontend"]
+      direction LR
+      CFW_P["Frontend CDN<br/>CloudFront web"] --> S3_P["Static files (S3)<br/>Next.js"]
+    end
+    subgraph PRD_BE["Backend API"]
+      direction LR
+      CFA_P["API CDN<br/>CloudFront api"] --> ALB_P["Load balancer (ALB)<br/>HTTP → API containers"] --> ECS_P["API containers<br/>ECS Fargate · Django"] --> RDS_P[("Postgres (RDS)")]
+    end
   end
 
   subgraph TRI["ERROR TRIAGE"]
     direction LR
-    CW["CloudWatch"] --> ALM["alarms"] --> LAM["Lambda"] --> OUT["MiniMax · Jira KAN · SNS email"]
+    CW["CloudWatch<br/>logs &amp; metrics"] --> ALM["Alarms"] --> LAM["Lambda triage"] --> OUT["MiniMax · Jira · GitHub · SNS"]
   end
 
   U --> STG
@@ -889,7 +901,7 @@ flowchart LR
   class CFW_P,S3_P,CFA_P,ALB_P,ECS_P,RDS_P prod;
   class CW,ALM,LAM,OUT triage;
       </pre>
-      <div class="caption">Browser → CloudFront(web)/S3 · CloudFront(api) → ALB → ECS Fargate → RDS. Errors → CloudWatch → Lambda triage → MiniMax / Jira / SNS.</div>
+      <div class="caption">Browser → Frontend CDN / S3 (Next.js) · API CDN → ALB → ECS Fargate (Django) → Postgres. Errors → CloudWatch → Lambda triage → MiniMax / Jira / GitHub / SNS.</div>
     </div>
 
     <div class="url-chips">
@@ -1125,7 +1137,7 @@ flowchart LR
         <tr><td><code>AWS_ROLE_ARN</code></td><td><span class="badge gh">GitHub</span></td><td>OIDC assume-role only</td></tr>
         <tr><td><code>DB_PASSWORD</code>, <code>DJANGO_SECRET_KEY</code></td><td><span class="badge gh">GitHub</span> → TF → <span class="badge sm">SM</span></td><td>RDS + ECS <code>secrets:</code></td></tr>
         <tr><td><code>API_URL</code>, <code>WEB_*</code>, <code>AWS_REGION</code></td><td><span class="badge gh">GitHub</span> (config)</td><td>Build / sync / smoke · region fallback <code>us-east-2</code></td></tr>
-        <tr><td>MiniMax / Jira</td><td><span class="badge sm">SM only</span></td><td>Triage Lambda at runtime</td></tr>
+        <tr><td>MiniMax / Jira / GitHub PAT</td><td><span class="badge sm">SM only</span></td><td>Triage Lambda at runtime</td></tr>
       </table>
       </div>
       <h4>turboai-notes-api</h4>
@@ -1165,6 +1177,7 @@ flowchart LR
   T1 --> L["Lambda triage"]
   L --> MM["MiniMax"]
   L --> JR["Jira KAN"]
+  L --> GH["GitHub fix/KEY<br/>draft PR (api)"]
   L --> T2["SNS reports"]
   T2 --> MAIL["Email"]
   INFRA["Infra alarms"] --> T2
@@ -1172,7 +1185,7 @@ flowchart LR
   classDef live fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
   classDef triage fill:#fdf0dd,stroke:#a5623f,stroke-width:1.5px,color:#3e2723;
   class FE,APP,LG,MF,AL live;
-  class T1,L,MM,JR,T2,MAIL,INFRA triage;
+  class T1,L,MM,JR,GH,T2,MAIL,INFRA triage;
       </pre>
       <div class="caption">Two SNS topics on purpose — Lambda must not subscribe to its own reports. MiniMax runs only in the Lambda.</div>
     </div>
@@ -1183,6 +1196,7 @@ flowchart LR
         <li>Fingerprint dedup in DynamoDB (72h TTL; resend every 10)</li>
         <li>Source excerpts bundled in Lambda zip (<code>apps/</code> + <code>config/</code>)</li>
         <li>Staging Jira project <strong>KAN</strong>; prod <code>jira_enabled=false</code></li>
+        <li>After Jira create: Lambda opens tracking branch/PR <code>fix/&lt;KEY&gt;</code> on <strong>turboai-notes-api</strong> (no code changes; web out of scope)</li>
         <li>Thresholds: app-errors Sum ≥5 / 5&nbsp;min staging, ≥3 prod</li>
       </ul>
     </div>
@@ -1197,7 +1211,7 @@ flowchart LR
       </table>
       </div>
       <p>ERROR from DRF handler / middleware / client-error endpoint; 4xx stays WARNING so triage does not fire on bad clients. Metric filter matches JSON <code>$.level</code>, not the string <code>[ERROR]</code>.</p>
-      <p>Lambda modules under <code>backend/observability/triage/</code>: <code>handler</code>, <code>logs</code>, <code>dedup</code>, <code>repo</code>, <code>llm</code>, <code>jira</code>, <code>notify</code>, <code>cloudwatch</code>. Ops: confirm SNS email; <code>put-secret-value</code> for MiniMax (and Jira when enabled). Ref: <code>backend/docs/architecture/observability.md</code>.</p>
+      <p>Lambda modules under <code>backend/observability/triage/</code>: <code>handler</code>, <code>logs</code>, <code>dedup</code>, <code>repo</code>, <code>llm</code>, <code>jira</code>, <code>github_pr</code>, <code>notify</code>, <code>cloudwatch</code>. Ops: confirm SNS email; <code>put-secret-value</code> for MiniMax, Jira, and GitHub PAT (when enabled). Ref: <code>backend/docs/architecture/observability.md</code>.</p>
     </details>
   </section>
 
@@ -1214,8 +1228,8 @@ flowchart LR
     </div>
 
     <div class="callout info" id="sm-only-rationale">
-      <div class="callout-title">MiniMax &amp; Jira = SM only</div>
-      <p>Not in GitHub. TF creates placeholders with <code>ignore_changes</code>; operator <code>put-secret-value</code>. Only the triage Lambda reads them. Contrast: <code>DJANGO_SECRET_KEY</code> / <code>DB_PASSWORD</code> need TF at apply → GH → SM → ECS.</p>
+      <div class="callout-title">MiniMax, Jira &amp; GitHub PAT = SM only</div>
+      <p>Not in GitHub Secrets. TF creates placeholders with <code>ignore_changes</code>; operator <code>put-secret-value</code>. Only the triage Lambda reads them. Contrast: <code>DJANGO_SECRET_KEY</code> / <code>DB_PASSWORD</code> need TF at apply → GH → SM → ECS.</p>
     </div>
 
     <div class="table-wrap">
@@ -1264,6 +1278,13 @@ flowchart LR
         <td>Not created</td>
       </tr>
       <tr>
+        <td>GitHub <code>…-github-credentials</code></td>
+        <td><span class="badge sm">SM only</span></td>
+        <td>Triage Lambda</td>
+        <td><code>github_pr_enabled</code> (PAT <code>repo</code> scope; api repo)</td>
+        <td>Off until secret exists</td>
+      </tr>
+      <tr>
         <td>Bastion PEM / MCP <code>.env</code></td>
         <td><span class="badge local">Local</span></td>
         <td>Operator / MCP</td>
@@ -1283,6 +1304,7 @@ flowchart LR
         <tr><td><code>…-db-password</code></td><td>✅</td><td>✅</td><td>ECS (+ RDS via TF)</td></tr>
         <tr><td><code>…-llm-credentials</code></td><td>✅ key set</td><td>✅ placeholder</td><td>Lambda</td></tr>
         <tr><td><code>…-jira-credentials</code></td><td>✅</td><td>❌</td><td>Lambda</td></tr>
+        <tr><td><code>…-github-credentials</code></td><td>when enabled</td><td>❌ default</td><td>Lambda (tracking branch/PR)</td></tr>
       </table>
       </div>
       <div class="table-wrap">
@@ -1309,18 +1331,18 @@ flowchart LR
   <!-- ========== 5. AUTH ========== -->
   <section class="card anchor-offset" id="auth">
     <h2>5. Authentication</h2>
-    <p class="lede">Two CloudFront origins → cookies need <code>SameSite=None; Secure</code> and an explicit CSRF header.</p>
+    <p class="lede">SPA and API share the <strong>web</strong> CloudFront host for browser calls (<code>/api/*</code> → ALB) so JWT cookies are first-party <code>SameSite=Lax; Secure</code> — works in Incognito. CSRF header still required on mutations.</p>
 
     <div class="origin-pair" aria-label="Web vs API origins">
       <div class="origin-card web">
-        <h4>Web origin</h4>
-        <p>Next.js static · CloudFront</p>
+        <h4>Web origin (SPA + /api proxy)</h4>
+        <p>Next.js static · CloudFront · <code>/api/*</code> → ALB</p>
         <code>d1qdib1mcwro0s… / doj4lx2n5ynh4…</code>
       </div>
-      <div class="origin-why">≠ shared<br/>cookie domain<br/>→ cross-site</div>
+      <div class="origin-why">same host<br/>first-party<br/>cookies</div>
       <div class="origin-card api">
-        <h4>API origin</h4>
-        <p>Django/DRF · CloudFront → ALB</p>
+        <h4>API CloudFront (direct)</h4>
+        <p>Swagger / curl / health · CloudFront → ALB</p>
         <code>d1ukfp2c7u1v45… / djnxnkcoh52pi…</code>
       </div>
     </div>
@@ -1329,12 +1351,12 @@ flowchart LR
       <div class="auth-step">
         <span class="n">1</span>
         <strong>Login</strong>
-        <p><code>POST /api/auth/login/</code> with credentials</p>
+        <p><code>POST /api/auth/login/</code> on the <em>web</em> host</p>
       </div>
       <div class="auth-step">
         <span class="n">2</span>
         <strong>httpOnly cookies</strong>
-        <p>API sets <code>access_token</code> + <code>refresh_token</code> on <em>API</em> origin — never <code>localStorage</code></p>
+        <p>Set on <em>web</em> host (proxied) — never <code>localStorage</code></p>
       </div>
       <div class="auth-step">
         <span class="n">3</span>
@@ -1351,24 +1373,25 @@ flowchart LR
     <div class="diagram-box">
       <pre class="mermaid">
 flowchart LR
-  FE["SPA web CF"] -->|"credentials: include"| API["API CF"]
-  API -->|"Set-Cookie httpOnly"| FE
-  FE -->|"Cookie + X-CSRFToken"| API
-  API -->|"CookieJWTAuthentication"| OWN["ownership only in Django"]
+  FE["SPA web CF"] -->|"same-origin /api/*"| PROXY["web CF behavior"]
+  PROXY --> ALB["ALB → Django"]
+  ALB -->|"Set-Cookie httpOnly Lax"| FE
+  FE -->|"Cookie + X-CSRFToken"| PROXY
+  ALB -->|"CookieJWTAuthentication"| OWN["ownership only in Django"]
 
   classDef web fill:#eaf3f0,stroke:#5f8f7a,stroke-width:1.5px,color:#1f3b2b;
   classDef api fill:#fdf0dd,stroke:#a5623f,stroke-width:1.5px,color:#3e2723;
-  class FE web;
-  class API,OWN api;
+  class FE,PROXY web;
+  class ALB,OWN api;
       </pre>
-      <div class="caption">Browser holds cookies; FE never stores JWTs. Authz = backend only.</div>
+      <div class="caption">Browser holds first-party cookies on the web host; FE never stores JWTs. Authz = backend only.</div>
     </div>
 
     <div class="auth-flags">
-      <span class="pill">SameSite=None</span>
+      <span class="pill">SameSite=Lax</span>
       <span class="pill">Secure</span>
       <span class="pill">httpOnly JWT</span>
-      <span class="pill">CookieJWTAuthentication</span>
+      <span class="pill">web /api/* proxy</span>
       <span class="pill">no localStorage tokens</span>
     </div>
 
@@ -1377,12 +1400,12 @@ flowchart LR
       <div class="table-wrap">
       <table class="tight">
         <tr><th>Cookie</th><th>HttpOnly</th><th>SameSite (stg/prod)</th></tr>
-        <tr><td><code>access_token</code></td><td>✅</td><td>None</td></tr>
-        <tr><td><code>refresh_token</code></td><td>✅ (rotates)</td><td>None</td></tr>
-        <tr><td><code>csrftoken</code></td><td>❌ (JS-readable)</td><td>None (aligned)</td></tr>
+        <tr><td><code>access_token</code></td><td>✅</td><td>Lax</td></tr>
+        <tr><td><code>refresh_token</code></td><td>✅ (rotates)</td><td>Lax</td></tr>
+        <tr><td><code>csrftoken</code></td><td>❌ (JS-readable)</td><td>Lax (aligned)</td></tr>
       </table>
       </div>
-      <p>CORS allowlist = that env’s web CloudFront only. <code>django-axes</code>: 5 failures / 1h. Auth throttle 20/min. Ref: <code>docs/process/10-csrf-cross-origin-fix.md</code>.</p>
+      <p>Browser traffic uses the web host (first-party). CORS allowlist still = that env’s web CloudFront only (defense in depth for the direct API CF). <code>django-axes</code>: 5 failures / 1h. Auth throttle 20/min. Incognito fix: <code>docs/process/19-incognito-first-party-cookies.md</code>. Prior cross-origin CSRF notes: <code>docs/process/10-csrf-cross-origin-fix.md</code>.</p>
     </details>
   </section>
 
@@ -1400,18 +1423,18 @@ flowchart LR
     <div class="diagram-box">
       <pre class="mermaid">
 flowchart LR
-  BR["Browser"] -->|"🚫 localStorage"| CK["httpOnly cookies<br/>API CloudFront"]
+  BR["Browser"] -->|"🚫 localStorage"| CK["httpOnly cookies<br/>web CF host · Lax"]
   CK --> DJ["Django authz"]
   DJ --> RDS[("RDS private")]
 
   classDef web fill:#eaf3f0,stroke:#5f8f7a,stroke-width:1.5px,color:#1f3b2b;
   classDef api fill:#fdf0dd,stroke:#a5623f,stroke-width:1.5px,color:#3e2723;
   classDef db fill:#e3edf5,stroke:#4f7cac,stroke-width:1.5px,color:#1f3a52;
-  class BR web;
-  class CK,DJ api;
+  class BR,CK web;
+  class DJ api;
   class RDS db;
       </pre>
-      <div class="caption">No tokens in JS · cookies on API CF · ownership in Django · DB not public.</div>
+      <div class="caption">No tokens in JS · first-party cookies on web CF · ownership in Django · DB not public.</div>
     </div>
 
     <div class="sec-grid" aria-label="Security pillars">

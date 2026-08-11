@@ -180,11 +180,19 @@ describe("NotesHome", () => {
     expect(screen.queryByText("First note")).not.toBeInTheDocument();
   });
 
+  it("shows loading until notes are ready", () => {
+    vi.mocked(api.me).mockReturnValue(new Promise(() => {}));
+    render(<NotesHome />);
+    expect(screen.getByText("Loading…")).toBeInTheDocument();
+    expect(screen.queryByText("+ New Note")).not.toBeInTheDocument();
+  });
+
   it("redirects to /login when the initial fetch fails", async () => {
     const hrefSetter = stubLocation();
     reportUnexpected.mockClear();
     vi.mocked(api.me).mockRejectedValue(new Error("unauthenticated"));
     render(<NotesHome />);
+    expect(await screen.findByText("Redirecting to login…")).toBeInTheDocument();
     await waitFor(() => expect(hrefSetter).toHaveBeenCalledWith("/login"));
     expect(reportUnexpected).toHaveBeenCalledWith(expect.any(Error), "NotesHome.load");
   });

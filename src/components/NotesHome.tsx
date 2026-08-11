@@ -10,6 +10,8 @@ export function NotesHome() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [filter, setFilter] = useState<number | null>(null);
+  const [ready, setReady] = useState(false);
+  const [authRedirect, setAuthRedirect] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -20,10 +22,14 @@ export function NotesHome() {
         if (!cancelled) {
           setCategories(cats);
           setNotes(ns);
+          setReady(true);
         }
       } catch (err) {
         reportUnexpected(err, "NotesHome.load");
-        if (!cancelled) window.location.href = "/login";
+        if (!cancelled) {
+          setAuthRedirect(true);
+          window.location.href = "/login";
+        }
       }
     })();
     return () => {
@@ -42,6 +48,22 @@ export function NotesHome() {
     } catch (err) {
       reportUnexpected(err, "NotesHome.createNote");
     }
+  }
+
+  if (authRedirect) {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-4">
+        <p className="text-[var(--muted)]">Redirecting to login…</p>
+      </main>
+    );
+  }
+
+  if (!ready) {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-4">
+        <p className="text-[var(--muted)]">Loading…</p>
+      </main>
+    );
   }
 
   return (
