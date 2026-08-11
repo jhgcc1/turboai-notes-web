@@ -862,19 +862,31 @@ flowchart LR
 
   subgraph STG["STAGING"]
     direction LR
-    CFW_S["CF web"] --> S3_S["S3"]
-    CFA_S["CF api"] --> ALB_S["ALB"] --> ECS_S["ECS"] --> RDS_S[("RDS")]
+    subgraph STG_FE["Frontend"]
+      direction LR
+      CFW_S["Frontend CDN<br/>CloudFront web"] --> S3_S["Static files (S3)<br/>Next.js"]
+    end
+    subgraph STG_BE["Backend API"]
+      direction LR
+      CFA_S["API CDN<br/>CloudFront api"] --> ALB_S["Load balancer (ALB)<br/>HTTP → API containers"] --> ECS_S["API containers<br/>ECS Fargate · Django"] --> RDS_S[("Postgres (RDS)")]
+    end
   end
 
   subgraph PRD["PROD"]
     direction LR
-    CFW_P["CF web"] --> S3_P["S3"]
-    CFA_P["CF api"] --> ALB_P["ALB"] --> ECS_P["ECS"] --> RDS_P[("RDS")]
+    subgraph PRD_FE["Frontend"]
+      direction LR
+      CFW_P["Frontend CDN<br/>CloudFront web"] --> S3_P["Static files (S3)<br/>Next.js"]
+    end
+    subgraph PRD_BE["Backend API"]
+      direction LR
+      CFA_P["API CDN<br/>CloudFront api"] --> ALB_P["Load balancer (ALB)<br/>HTTP → API containers"] --> ECS_P["API containers<br/>ECS Fargate · Django"] --> RDS_P[("Postgres (RDS)")]
+    end
   end
 
   subgraph TRI["ERROR TRIAGE"]
     direction LR
-    CW["CloudWatch"] --> ALM["alarms"] --> LAM["Lambda"] --> OUT["MiniMax · Jira KAN · SNS email"]
+    CW["CloudWatch<br/>logs &amp; metrics"] --> ALM["Alarms"] --> LAM["Lambda triage"] --> OUT["MiniMax · Jira · SNS"]
   end
 
   U --> STG
@@ -889,7 +901,7 @@ flowchart LR
   class CFW_P,S3_P,CFA_P,ALB_P,ECS_P,RDS_P prod;
   class CW,ALM,LAM,OUT triage;
       </pre>
-      <div class="caption">Browser → CloudFront(web)/S3 · CloudFront(api) → ALB → ECS Fargate → RDS. Errors → CloudWatch → Lambda triage → MiniMax / Jira / SNS.</div>
+      <div class="caption">Browser → Frontend CDN / S3 (Next.js) · API CDN → ALB → ECS Fargate (Django) → Postgres. Errors → CloudWatch → Lambda triage → MiniMax / Jira / SNS.</div>
     </div>
 
     <div class="url-chips">
