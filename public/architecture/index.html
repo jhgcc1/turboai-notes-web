@@ -318,7 +318,7 @@
   .path-card ul { margin: 0; padding-left: 1.1rem; font-size: .84rem; }
   .path-card li { margin-bottom: .2rem; }
 
-  /* Deploy swimlanes: shared gates → API | Web columns */
+  /* Deploy swimlanes: shared gates → Backend | Frontend columns */
   .deploy-flow {
     margin: 1rem 0 .5rem;
     border: 1px solid var(--card-border);
@@ -363,6 +363,16 @@
     font-size: 1.1rem;
     flex: 0 0 auto;
   }
+  .deploy-split-label {
+    text-align: center;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: .55rem 1rem .15rem;
+    background: #fff;
+  }
   .deploy-lanes {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -370,44 +380,103 @@
     min-width: 0;
   }
   .deploy-lane {
-    padding: .9rem 1rem 1rem;
+    padding: 1rem 1.05rem 1.1rem;
     min-width: 0;
   }
   .deploy-lane + .deploy-lane {
     border-left: 1px solid var(--card-border);
   }
-  .deploy-lane.api { background: #fffaf6; }
-  .deploy-lane.web { background: #f6faf8; }
-  .deploy-lane-title {
-    margin: 0 0 .65rem;
-    font-family: var(--font-display);
-    font-size: 1rem;
+  .deploy-lane.api { background: linear-gradient(180deg, #fff6ec, #fffaf6); }
+  .deploy-lane.web { background: linear-gradient(180deg, #eef7f3, #f6faf8); }
+  .lane-hero {
+    display: flex;
+    gap: .75rem;
+    align-items: flex-start;
+    margin-bottom: .75rem;
+  }
+  .lane-icon {
+    flex: 0 0 auto;
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
-    gap: .45rem;
+    justify-content: center;
+    border: 1px solid var(--card-border);
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(93,64,55,.08);
   }
-  .deploy-lane.api .deploy-lane-title { color: #7a4429; }
-  .deploy-lane.web .deploy-lane-title { color: #2a4f3f; }
-  .lane-tag {
+  .deploy-lane.api .lane-icon { border-color: #e9c9a8; background: #fffaf1; }
+  .deploy-lane.web .lane-icon { border-color: #b7cec4; background: #f3faf7; }
+  .lane-icon svg { width: 44px; height: 44px; display: block; }
+  .lane-hero-text { min-width: 0; flex: 1; }
+  .lane-kicker {
     display: inline-block;
-    font-family: var(--font-body);
     font-size: .68rem;
     font-weight: 700;
     letter-spacing: .04em;
     text-transform: uppercase;
-    padding: .15rem .45rem;
+    padding: .12rem .45rem;
     border-radius: 6px;
+    margin-bottom: .25rem;
   }
-  .deploy-lane.api .lane-tag {
+  .deploy-lane.api .lane-kicker {
     background: #fdf0dd;
     color: #7a4429;
     border: 1px solid var(--random);
   }
-  .deploy-lane.web .lane-tag {
+  .deploy-lane.web .lane-kicker {
     background: #eaf3f0;
     color: #2a4f3f;
     border: 1px solid var(--personal);
   }
+  .deploy-lane-title {
+    margin: 0 0 .2rem;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    line-height: 1.25;
+  }
+  .deploy-lane.api .deploy-lane-title { color: #7a4429; }
+  .deploy-lane.web .deploy-lane-title { color: #2a4f3f; }
+  .lane-one-liner {
+    margin: 0;
+    font-size: .88rem;
+    line-height: 1.35;
+    color: var(--ink);
+  }
+  .lane-facts {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    margin: 0 0 .75rem;
+  }
+  .lane-fact {
+    display: flex;
+    align-items: flex-start;
+    gap: .45rem;
+    font-size: .8rem;
+    line-height: 1.3;
+    background: #fff;
+    border: 1px solid var(--card-border);
+    border-radius: 9px;
+    padding: .4rem .55rem;
+  }
+  .lane-fact .mark {
+    flex: 0 0 auto;
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .7rem;
+    font-weight: 800;
+    margin-top: .05rem;
+  }
+  .lane-fact.yes .mark { background: var(--pending-bg); color: #2e5230; border: 1px solid var(--pending); }
+  .lane-fact.no .mark { background: #f3e9db; color: #8d6e63; border: 1px solid var(--card-border); }
+  .lane-fact.infra .mark { background: #fdf0dd; color: #7a4429; border: 1px solid var(--random); }
+  .lane-fact.upload .mark { background: #eaf3f0; color: #2a4f3f; border: 1px solid var(--personal); }
   .deploy-steps {
     list-style: none;
     margin: 0;
@@ -416,13 +485,15 @@
   }
   .deploy-steps li {
     position: relative;
-    margin: 0 0 .45rem;
-    padding: .55rem .7rem .55rem 2.4rem;
+    margin: 0 0 .4rem;
+    padding: .5rem .7rem .5rem 2.45rem;
     background: #fff;
     border: 1px solid var(--card-border);
     border-radius: 10px;
-    font-size: .84rem;
-    line-height: 1.35;
+    font-size: .86rem;
+    line-height: 1.3;
+    color: #3e2723;
+    font-weight: 600;
   }
   .deploy-steps li::before {
     counter-increment: step;
@@ -443,18 +514,19 @@
   }
   .deploy-lane.api .deploy-steps li::before { background: #a5623f; }
   .deploy-lane.web .deploy-steps li::before { background: #5f8f7a; }
-  .deploy-steps li strong {
+  .deploy-steps li .step-jargon {
     display: block;
-    font-family: var(--font-display);
-    font-size: .9rem;
-    margin-bottom: .1rem;
-    color: #3e2723;
+    font-weight: 400;
+    font-size: .72rem;
+    color: var(--muted);
+    margin-top: .12rem;
   }
   .deploy-steps li:last-child { margin-bottom: 0; }
-  .deploy-note {
-    margin: .55rem 0 0;
-    font-size: .78rem;
+  .deploy-compare-caption {
+    text-align: center;
+    font-size: .86rem;
     color: var(--muted);
+    margin: .55rem 0 .15rem;
     font-style: italic;
   }
   @media (max-width: 700px) {
@@ -621,7 +693,7 @@
 
   .sec-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: .7rem;
     margin: .8rem 0;
     min-width: 0;
@@ -654,72 +726,11 @@
     margin-bottom: .25rem;
   }
   .sec-card.tokens { border-top: 4px solid var(--random); }
-  .sec-card.origin { border-top: 4px solid var(--personal); }
   .sec-card.backend { border-top: 4px solid #a5623f; }
   .sec-card.secrets { border-top: 4px solid var(--secret-sm); }
-  .sec-card.network { border-top: 4px solid var(--live); }
   .sec-card.gates { border-top: 4px solid var(--pending); }
-
-  .threat-grid {
-    display: grid;
-    grid-template-columns: 1fr 1.2fr;
-    gap: .4rem .55rem;
-    margin: .85rem 0 .3rem;
-    min-width: 0;
-  }
-  .threat-grid .th {
-    font-size: .72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    color: var(--muted);
-    padding: .2rem .45rem;
-  }
-  .threat-row {
-    display: contents;
-  }
-  .threat-cell {
-    border-radius: 8px;
-    padding: .55rem .65rem;
-    font-size: .8rem;
-    line-height: 1.35;
-    min-width: 0;
-  }
-  .threat-cell.threat {
-    background: #fdf0dd;
-    border: 1px solid #e9c9a8;
-    font-weight: 600;
-    color: #3e2723;
-  }
-  .threat-cell.control {
-    background: #fff;
-    border: 1px solid var(--card-border);
-  }
-  .threat-cell.control code { font-size: .76em; }
-  .gate-pair {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: .7rem;
-    margin: .8rem 0;
-    min-width: 0;
-  }
-  .gate-pair > * { min-width: 0; }
-  @media (max-width: 900px) {
-    .sec-grid { grid-template-columns: 1fr 1fr; }
-  }
   @media (max-width: 700px) {
     .sec-grid { grid-template-columns: 1fr; }
-    .gate-pair { grid-template-columns: 1fr; }
-    .threat-grid { grid-template-columns: 1fr; }
-    .threat-grid .th.control-h { display: none; }
-    .threat-cell.control::before {
-      content: "Control · ";
-      font-weight: 700;
-      color: var(--muted);
-      font-size: .72rem;
-      text-transform: uppercase;
-      letter-spacing: .03em;
-    }
   }
 </style>
 </head>
@@ -871,98 +882,168 @@ flowchart LR
   <!-- ========== 2. CI/CD ========== -->
   <section class="card anchor-offset" id="cicd">
     <h2>2. CI / CD</h2>
-    <p class="lede">Three workflows per repo: <code>ci.yml</code>, <code>deploy.yml</code>, <code>ai-review.yml</code>. API CI fails on missing migrations; apply happens on ECS task start. Only the API repo runs Terraform.</p>
+    <p class="lede">Two apps ship separately: the <strong>backend</strong> is a container that runs on AWS; the <strong>frontend</strong> is a folder of static files on a CDN. Same triggers for both — different jobs after that.</p>
 
     <div class="path-compare">
       <div class="path-card staging">
         <h4>■ Staging</h4>
-        <p><strong>Trigger:</strong> merge to <code>develop</code></p>
+        <p><strong>When:</strong> merge to <code>develop</code></p>
         <ul>
-          <li>Environment <code>staging</code> (no reviewers)</li>
-          <li>API TF: <code>terraform/envs/staging</code></li>
-          <li>API + web ship together</li>
+          <li>No reviewers required</li>
+          <li>Backend + frontend both deploy</li>
         </ul>
       </div>
       <div class="path-card prod">
         <h4>■ Prod</h4>
-        <p><strong>Trigger:</strong> published Release (+ reviewers)</p>
+        <p><strong>When:</strong> published GitHub Release</p>
         <ul>
-          <li>Environment <code>prod</code> (approval required)</li>
-          <li>API TF: <code>terraform/envs/prod</code></li>
+          <li>Reviewers must approve</li>
           <li>First live 2026-08-10</li>
         </ul>
       </div>
     </div>
 
-    <div class="deploy-flow" aria-label="Deploy paths: shared gates then API vs Web">
+    <div class="deploy-flow" aria-label="Deploy: shared checks, then Backend vs Frontend">
       <div class="deploy-gates">
         <div class="deploy-gate">
-          <strong>GH Secrets</strong>
-          role ARN, DB/Django keys, URLs
+          <strong>Secrets ready</strong>
+          keys &amp; URLs in GitHub
         </div>
         <div class="deploy-gate-arrow" aria-hidden="true">→</div>
         <div class="deploy-gate">
-          <strong>CI</strong>
-          quality + API <code>makemigrations --check</code>
+          <strong>Tests pass</strong>
+          quality gates green
         </div>
         <div class="deploy-gate-arrow" aria-hidden="true">→</div>
         <div class="deploy-gate">
-          <strong>OIDC</strong>
-          assume <code>turboai-notes-github-actions</code>
+          <strong>AWS login</strong>
+          GitHub assumes a deploy role
         </div>
       </div>
+
+      <div class="deploy-split-label">Then each app ships its own way</div>
 
       <div class="deploy-lanes">
         <div class="deploy-lane api">
-          <h3 class="deploy-lane-title"><span class="lane-tag">API</span> turboai-notes-api</h3>
+          <div class="lane-hero">
+            <div class="lane-icon" aria-hidden="true">
+              <!-- Shipping container metaphor -->
+              <svg viewBox="0 0 64 64" role="img" focusable="false">
+                <rect x="8" y="18" width="48" height="30" rx="3" fill="#e9a680" stroke="#7a4429" stroke-width="2"/>
+                <line x1="20" y1="18" x2="20" y2="48" stroke="#7a4429" stroke-width="2"/>
+                <line x1="32" y1="18" x2="32" y2="48" stroke="#7a4429" stroke-width="2"/>
+                <line x1="44" y1="18" x2="44" y2="48" stroke="#7a4429" stroke-width="2"/>
+                <rect x="14" y="48" width="8" height="5" rx="1.5" fill="#5d4037"/>
+                <rect x="42" y="48" width="8" height="5" rx="1.5" fill="#5d4037"/>
+                <text x="32" y="36" text-anchor="middle" font-size="9" font-weight="700" fill="#3e2723" font-family="Georgia, serif">API</text>
+              </svg>
+            </div>
+            <div class="lane-hero-text">
+              <span class="lane-kicker">Backend · API</span>
+              <h3 class="deploy-lane-title">Shipping container</h3>
+              <p class="lane-one-liner">Builds a container and runs it on AWS.</p>
+            </div>
+          </div>
+
+          <div class="lane-facts">
+            <div class="lane-fact infra">
+              <span class="mark" aria-hidden="true">⚙</span>
+              <span><strong>Changes infrastructure</strong> — creates/updates AWS resources (Terraform)</span>
+            </div>
+            <div class="lane-fact yes">
+              <span class="mark" aria-hidden="true">DB</span>
+              <span><strong>Updates the database</strong> when the new container starts</span>
+            </div>
+          </div>
+
           <ol class="deploy-steps">
             <li>
-              <strong>Build &amp; push ECR</strong>
-              Docker image → env repository
+              Pack the app into a container image
+              <span class="step-jargon">ECR = Amazon’s image registry</span>
             </li>
             <li>
-              <strong>Terraform apply</strong>
-              stack + triage Lambda zip (<code>archive_file</code>)
+              Apply infrastructure changes
+              <span class="step-jargon">Terraform (TF) updates the AWS stack</span>
             </li>
             <li>
-              <strong>ECS force deploy</strong>
-              new tasks → entrypoint <code>migrate --noinput</code>
+              Start the new container (DB migrate on boot)
+              <span class="step-jargon">ECS = managed containers · migrate in the entrypoint</span>
             </li>
             <li>
-              <strong>Smoke</strong>
-              <code>/api/health/</code>
+              Smoke-check the health URL
+              <span class="step-jargon"><code>/api/health/</code></span>
             </li>
           </ol>
-          <p class="deploy-note">Migrate runs on task start (staging + prod), not in the CI unit-test job.</p>
         </div>
+
         <div class="deploy-lane web">
-          <h3 class="deploy-lane-title"><span class="lane-tag">Web</span> turboai-notes-web</h3>
+          <div class="lane-hero">
+            <div class="lane-icon" aria-hidden="true">
+              <!-- Folder of files on CDN metaphor -->
+              <svg viewBox="0 0 64 64" role="img" focusable="false">
+                <path d="M10 22h18l4 4h22v24H10V22z" fill="#9ebab0" stroke="#2a4f3f" stroke-width="2"/>
+                <rect x="16" y="30" width="32" height="4" rx="1" fill="#fff" opacity=".85"/>
+                <rect x="16" y="37" width="24" height="4" rx="1" fill="#fff" opacity=".85"/>
+                <rect x="16" y="44" width="28" height="4" rx="1" fill="#fff" opacity=".85"/>
+                <circle cx="48" cy="16" r="9" fill="#e3edf5" stroke="#4f7cac" stroke-width="2"/>
+                <text x="48" y="19" text-anchor="middle" font-size="7" font-weight="700" fill="#1f3a52" font-family="Georgia, serif">CDN</text>
+              </svg>
+            </div>
+            <div class="lane-hero-text">
+              <span class="lane-kicker">Frontend · Web</span>
+              <h3 class="deploy-lane-title">Folder on a CDN</h3>
+              <p class="lane-one-liner">Builds static files and puts them on the CDN.</p>
+            </div>
+          </div>
+
+          <div class="lane-facts">
+            <div class="lane-fact upload">
+              <span class="mark" aria-hidden="true">↑</span>
+              <span><strong>Only uploads files</strong> into the bucket Terraform already created</span>
+            </div>
+            <div class="lane-fact no">
+              <span class="mark" aria-hidden="true">—</span>
+              <span><strong>No database</strong> — no migrations, no server process</span>
+            </div>
+          </div>
+
           <ol class="deploy-steps">
             <li>
-              <strong>Next export</strong>
-              <code>next build</code> static output
+              Build the static website files
+              <span class="step-jargon">Next.js export · HTML / CSS / JS</span>
             </li>
             <li>
-              <strong>S3 sync</strong>
-              upload site bucket
+              Upload them to the site bucket
+              <span class="step-jargon">S3 = the file storage bucket</span>
             </li>
             <li>
-              <strong>CloudFront invalidate</strong>
-              purge CDN cache
+              Refresh the CDN so visitors see the new files
+              <span class="step-jargon">CloudFront cache invalidate</span>
             </li>
             <li>
-              <strong>Smoke</strong>
-              hit <code>WEB_URL</code>
+              Smoke-check the website URL
+              <span class="step-jargon">hit <code>WEB_URL</code></span>
             </li>
           </ol>
-          <p class="deploy-note">No Terraform / no migrations — static site only; bucket from API stack.</p>
         </div>
       </div>
     </div>
-    <div class="caption">Shared: Secrets → CI (incl. migration <em>check</em>) → OIDC. API: ECR → TF → ECS (entrypoint <em>apply</em>). Web: export → S3 → CloudFront.</div>
+    <p class="deploy-compare-caption">Remember: only the backend changes AWS infrastructure and the database. The web deploy just replaces files on the CDN.</p>
 
     <details class="fold">
-      <summary>Pipeline secrets &amp; workflow YAML details</summary>
+      <summary>Acronym cheat-sheet &amp; workflow YAML details</summary>
+      <div class="table-wrap">
+      <table class="tight">
+        <tr><th>Short</th><th>Means</th><th>In this project</th></tr>
+        <tr><td>ECR</td><td>Elastic Container Registry</td><td>Where the API Docker image is stored</td></tr>
+        <tr><td>TF / Terraform</td><td>Infrastructure as code</td><td>Only the API repo runs it</td></tr>
+        <tr><td>ECS</td><td>Elastic Container Service</td><td>Runs the API container (Fargate)</td></tr>
+        <tr><td>S3</td><td>Simple Storage Service</td><td>Holds the static web files</td></tr>
+        <tr><td>CloudFront / CDN</td><td>Content Delivery Network</td><td>Serves web (and API) at the edge</td></tr>
+        <tr><td>OIDC</td><td>Federated login to AWS</td><td>GitHub Actions assumes the deploy role</td></tr>
+        <tr><td>Migrate</td><td>Apply DB schema changes</td><td>Runs when the API container starts — not in unit tests</td></tr>
+      </table>
+      </div>
       <div class="table-wrap">
       <table class="tight">
         <tr><th>Input</th><th>Where</th><th>Becomes</th></tr>
@@ -1233,119 +1314,49 @@ flowchart LR
   <!-- ========== 6. SECURITY ========== -->
   <section class="card anchor-offset" id="security">
     <h2>6. Security</h2>
-    <p class="lede">Why this design is hard to abuse — tokens never in JS, authz only on the API, origins and secrets locked per environment.</p>
+    <p class="lede">Tokens out of JS · authz on the API · origins, secrets, and network locked per env.</p>
 
     <div class="auth-flags" aria-label="Security highlights">
       <span class="pill">httpOnly JWT</span>
-      <span class="pill">CSRF bootstrap</span>
-      <span class="pill">CORS per env</span>
+      <span class="pill">CSRF + CORS</span>
       <span class="pill">Authz in Django</span>
-      <span class="pill">SM for secrets</span>
-      <span class="pill">Bastion /32</span>
+      <span class="pill">SM · bastion</span>
     </div>
 
     <div class="sec-grid">
       <div class="sec-card tokens">
-        <div class="sec-tag">Tokens</div>
-        <h4>Static export is fine</h4>
+        <div class="sec-tag">Session</div>
+        <h4>httpOnly JWT · CSRF · CORS</h4>
         <ul>
-          <li>Hosting choice: Next → S3 + CloudFront</li>
-          <li>JWTs are <strong>not</strong> in JS / <code>localStorage</code></li>
-          <li>httpOnly · Secure · <code>SameSite=None</code> on the <em>API</em> origin</li>
-        </ul>
-      </div>
-      <div class="sec-card origin">
-        <div class="sec-tag">Cross-origin</div>
-        <h4>CSRF + CORS locked</h4>
-        <ul>
-          <li>Unsafe methods need <code>X-CSRFToken</code> (bootstrap via <code>/api/auth/csrf/</code>)</li>
-          <li><code>CORS_ALLOWED_ORIGINS</code> / <code>CSRF_TRUSTED_ORIGINS</code> = that env’s web CF only</li>
-          <li>No wildcards / localhost in staging or prod</li>
+          <li>JWT in httpOnly · Secure · <code>SameSite=None</code> cookies on the API origin — never <code>localStorage</code></li>
+          <li>Unsafe methods need <code>X-CSRFToken</code> (bootstrap <code>/api/auth/csrf/</code>)</li>
+          <li>CORS / CSRF trusted origins = that env’s web CloudFront only (no wildcards)</li>
         </ul>
       </div>
       <div class="sec-card backend">
-        <div class="sec-tag">Backend</div>
-        <h4>Ownership stays in Django</h4>
+        <div class="sec-tag">Authz</div>
+        <h4>Backend only</h4>
         <ul>
-          <li>Frontend has <strong>no</strong> authz / ownership rules</li>
-          <li>Django password validators + auth throttle <code>20/min</code></li>
-          <li><code>django-axes</code>: 5 failures / 1h cooloff</li>
+          <li>Ownership filters only in Django/DRF — never in the SPA</li>
+          <li>Password validators · auth throttle <code>20/min</code> · <code>django-axes</code> 5 failures / 1h</li>
         </ul>
       </div>
       <div class="sec-card secrets">
-        <div class="sec-tag">Secrets</div>
-        <h4>Two paths, on purpose</h4>
+        <div class="sec-tag">Secrets &amp; network</div>
+        <h4>SM paths · private RDS</h4>
         <ul>
           <li>Django/DB: GH → TF → SM → ECS</li>
-          <li>MiniMax / Jira: <strong>SM only</strong> → triage Lambda</li>
-          <li>No secret values on this page</li>
-        </ul>
-      </div>
-      <div class="sec-card network">
-        <div class="sec-tag">Network</div>
-        <h4>Bastion + private RDS</h4>
-        <ul>
-          <li>Bastion SSH allowlisted to operator <code>/32</code></li>
-          <li>RDS in private subnets (ECS + bastion only)</li>
-          <li>TLS at CloudFront; ALB is HTTP inside VPC</li>
+          <li>MiniMax / Jira: <strong>SM only</strong> → triage Lambda (never GitHub)</li>
+          <li>Bastion SSH <code>/32</code> · RDS private (ECS + bastion)</li>
         </ul>
       </div>
       <div class="sec-card gates">
         <div class="sec-tag">Delivery</div>
         <h4>Branch &amp; env gates</h4>
         <ul>
-          <li><code>main</code>: CI <code>quality</code> + 1 review</li>
-          <li>Env <code>prod</code>: required reviewers</li>
-          <li><code>jhgcc1</code> (admin) may bypass; staging unprotected for velocity</li>
-        </ul>
-      </div>
-    </div>
-
-    <h3>Threat → control</h3>
-    <div class="threat-grid" role="table" aria-label="Threat to control mapping">
-      <div class="th">Threat</div>
-      <div class="th control-h">Control</div>
-      <div class="threat-row">
-        <div class="threat-cell threat">XSS steals session token</div>
-        <div class="threat-cell control">httpOnly cookies on API origin — never <code>localStorage</code> JWT</div>
-      </div>
-      <div class="threat-row">
-        <div class="threat-cell threat">Cross-site forged write</div>
-        <div class="threat-cell control">CSRF bootstrap + <code>X-CSRFToken</code> on POST/PATCH/DELETE</div>
-      </div>
-      <div class="threat-row">
-        <div class="threat-cell threat">Wrong site talks to API</div>
-        <div class="threat-cell control">CORS / CSRF trusted origins = env web CloudFront only</div>
-      </div>
-      <div class="threat-row">
-        <div class="threat-cell threat">“Hide my notes” in the SPA</div>
-        <div class="threat-cell control">Ownership filters only in Django/DRF</div>
-      </div>
-      <div class="threat-row">
-        <div class="threat-cell threat">LLM / Jira key in CI logs</div>
-        <div class="threat-cell control">MiniMax &amp; Jira never enter GitHub — SM → Lambda only</div>
-      </div>
-      <div class="threat-row">
-        <div class="threat-cell threat">Open SSH / exposed DB</div>
-        <div class="threat-cell control">Bastion <code>/32</code> · RDS private · tunnel via MCP when needed</div>
-      </div>
-    </div>
-
-    <div class="gate-pair">
-      <div class="path-card staging">
-        <h4>Staging</h4>
-        <p>Auto-deploy on <code>develop</code> — Environment unprotected for velocity.</p>
-        <ul>
-          <li>CORS / CSRF → staging web CF</li>
-          <li>Same cookie + CSRF model as prod</li>
-        </ul>
-      </div>
-      <div class="path-card prod">
-        <h4>Prod</h4>
-        <p>Published Release + Environment <code>prod</code> reviewers.</p>
-        <ul>
-          <li><code>main</code>: <code>quality</code> + 1 approval</li>
-          <li>Admin bypass: <code>jhgcc1</code> only</li>
+          <li>Staging: auto on <code>develop</code> (unprotected for velocity)</li>
+          <li>Prod: published Release + env <code>prod</code> reviewers</li>
+          <li><code>main</code>: CI <code>quality</code> + 1 approval · admin bypass <code>jhgcc1</code></li>
         </ul>
       </div>
     </div>
