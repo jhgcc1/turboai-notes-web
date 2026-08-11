@@ -20,7 +20,9 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 — API must be at `NEXT_PUBLIC_API_URL`.
+Open http://localhost:3000 — API must be at `NEXT_PUBLIC_API_URL` (local: `http://localhost:8000`).
+
+Staging/prod builds set `NEXT_PUBLIC_API_URL` to the **web** CloudFront URL so the SPA calls same-origin `/api/*` (web CF → ALB). That makes auth cookies first-party and works in Incognito. Do not point the build at the separate API CloudFront hostname.
 
 Full stack: from `../backend` run `docker compose up --build`.
 
