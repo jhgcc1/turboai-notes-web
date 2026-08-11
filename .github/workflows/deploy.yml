@@ -50,7 +50,9 @@ jobs:
           echo "web_url=${{ secrets.WEB_URL }}" >> "$GITHUB_OUTPUT"
       - name: Build static export site
         env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.API_URL }}
+          # Same-origin API via web CloudFront /api/* → ALB (first-party cookies / Incognito).
+          # Do not point at the separate API CloudFront hostname.
+          NEXT_PUBLIC_API_URL: ${{ secrets.WEB_URL }}
         run: |
           npm ci
           npx next build
@@ -71,6 +73,8 @@ jobs:
       - name: Smoke
         run: |
           curl -fsSI "${{ secrets.WEB_URL }}" | head -5
+          curl -fsS "${{ secrets.WEB_URL }}/api/health/" | head -5
           echo "### Frontend ${{ env.TF_ENV }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Web: ${{ secrets.WEB_URL }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- API: ${{ secrets.API_URL }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API (same-origin proxy): ${{ secrets.WEB_URL }}/api/" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API CloudFront (direct): ${{ secrets.API_URL }}" >> "$GITHUB_STEP_SUMMARY"
