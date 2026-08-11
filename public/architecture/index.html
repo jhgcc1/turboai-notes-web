@@ -762,6 +762,50 @@
   @media (max-width: 480px) {
     .sec-grid { grid-template-columns: 1fr; }
   }
+
+  .ai-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: .65rem;
+    margin: .85rem 0 .7rem;
+    min-width: 0;
+  }
+  .ai-stat {
+    background: #fff;
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: .85rem .7rem .75rem;
+    text-align: center;
+    min-width: 0;
+  }
+  .ai-stat .ai-label {
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: .35rem;
+  }
+  .ai-stat .ai-value {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #3e2723;
+    line-height: 1.2;
+    margin: 0;
+  }
+  .ai-stat .ai-sub {
+    margin: .3rem 0 0;
+    font-size: .74rem;
+    color: var(--muted);
+    line-height: 1.3;
+  }
+  @media (max-width: 900px) {
+    .ai-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 480px) {
+    .ai-grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -794,6 +838,7 @@
       <li><a href="#auth">Auth</a></li>
       <li><a href="#security">Security</a></li>
       <li><a href="#tooling">MCP &amp; skills</a></li>
+      <li><a href="#ai-cost">AI usage &amp; cost</a></li>
       <li><a href="#appendix">Appendix</a></li>
     </ol>
     <h4 style="margin-top:1rem;">Legend</h4>
@@ -1543,9 +1588,59 @@ flowchart LR
     </details>
   </section>
 
-  <!-- ========== 8. APPENDIX ========== -->
+  <!-- ========== 8. AI USAGE & COST ========== -->
+  <section class="card anchor-offset" id="ai-cost">
+    <h2>8. AI usage &amp; cost</h2>
+    <p class="lede">Presentation framing: all estimated usage attributed to <b>Cursor Grok 4.5 High Fast</b>. Figures are estimates — not an invoice.</p>
+
+    <div class="ai-grid">
+      <div class="ai-stat">
+        <div class="ai-label">Model</div>
+        <p class="ai-value">Grok 4.5 High Fast</p>
+        <p class="ai-sub">Cursor · presentation attribution</p>
+      </div>
+      <div class="ai-stat">
+        <div class="ai-label">Est. tokens</div>
+        <p class="ai-value">~0.85M</p>
+        <p class="ai-sub">~3.41M transcript chars ÷ 4</p>
+      </div>
+      <div class="ai-stat">
+        <div class="ai-label">Est. $ range</div>
+        <p class="ai-value">~$15–$40</p>
+        <p class="ai-sub">API-equivalent · tool overhead</p>
+      </div>
+      <div class="ai-stat">
+        <div class="ai-label">List price used</div>
+        <p class="ai-value">$2 / $6</p>
+        <p class="ai-sub">per MTok in / out · &lt;200k prompts</p>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="tight">
+        <tr><th>Item</th><th>Value</th></tr>
+        <tr><td>Transcript scope</td><td>1 parent + 54 subagents (<code>0267fdab-…</code>) · 55 <code>.jsonl</code> files</td></tr>
+        <tr><td>Characters measured</td><td>~3.41M (file size; no <code>usage</code> / token fields in transcripts)</td></tr>
+        <tr><td>Token heuristic</td><td>chars ÷ 4 → ~853k tokens</td></tr>
+        <tr><td>Visible-text floor</td><td>~$2.70 at 70% in / 30% out × Grok list rates (undercounts tool payloads)</td></tr>
+        <tr><td>Illustrative range</td><td>~$15–$40 if agent tool traffic is ~5–15× visible transcript text</td></tr>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-title">Caveats</div>
+      <p><b>Cursor subscription</b> (fast-request allowance), not raw xAI API metering — actual spend is the plan, not this table. <b>No billing metadata</b> in transcripts; chars÷4 is a reproducible proxy. Tool reads/shell/MCP payloads are mostly absent from saved chats, so real tokens are higher. Prompt caching would lower API-equivalent cost. Numbers are for presentation context only.</p>
+    </div>
+
+    <details class="fold sec-refs">
+      <summary>Process writeup</summary>
+      <p><code>docs/process/13-ai-development-process.md</code> §3 — same methodology &amp; Grok-only framing.</p>
+    </details>
+  </section>
+
+  <!-- ========== 9. APPENDIX ========== -->
   <section class="card anchor-offset" id="appendix">
-    <h2>8. Appendix</h2>
+    <h2>9. Appendix</h2>
     <p class="lede">Detail kept off the main deck — open when presenting Q&amp;A.</p>
 
     <details class="fold">
