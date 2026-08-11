@@ -27,7 +27,7 @@ export function NoteEditor({ noteId }: { noteId: number }) {
         setCategory(n.category);
       } catch (err) {
         reportUnexpected(err, "NoteEditor.load");
-        window.location.href = "/login";
+        window.location.href = "/login/";
       }
     })();
     return () => {

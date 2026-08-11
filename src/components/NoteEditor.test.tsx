@@ -126,12 +126,12 @@ describe("NoteEditor", () => {
     await waitFor(() => expect(api.updateNote).toHaveBeenCalled());
   });
 
-  it("redirects to /login when the initial fetch fails", async () => {
+  it("redirects to /login/ when the initial fetch fails", async () => {
     const hrefSetter = stubLocation();
     reportUnexpected.mockClear();
     vi.mocked(api.getNote).mockRejectedValue(new Error("not found"));
     render(<NoteEditor noteId={10} />);
-    await waitFor(() => expect(hrefSetter).toHaveBeenCalledWith("/login"));
+    await waitFor(() => expect(hrefSetter).toHaveBeenCalledWith("/login/"));
     expect(reportUnexpected).toHaveBeenCalledWith(expect.any(Error), "NoteEditor.load");
   });
 

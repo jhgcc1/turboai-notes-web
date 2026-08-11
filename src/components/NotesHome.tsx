@@ -28,7 +28,7 @@ export function NotesHome() {
         reportUnexpected(err, "NotesHome.load");
         if (!cancelled) {
           setAuthRedirect(true);
-          window.location.href = "/login";
+          window.location.href = "/login/";
         }
       }
     })();
